@@ -2,11 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -14,62 +17,91 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/getlantern/systray"
 )
 
 type instance struct {
-	name               string
-	imgFolders         []string
-	timeToQueue        time.Duration
-	postInterval       time.Duration
-	postDelayAtStartup string
-	platforms          map[string]string
+	Name               string            `json:"Name"`
+	ImgFolders         []string          `json:"ImgFolders"`
+	TimeToQueue        string            `json:"TimeToQueue"`
+	PostInterval       string            `json:"PostInterval"`
+	PostDelayAtStartup string            `json:"PostDelayAtStartup"`
+	Platforms          map[string]string `json:"Platforms"`
+	ItemsInQueue       int               `json:"ItemsInQueue"`
+	NextPostTime       string            `json:"NextPostTime"`
 }
+
+type allInstances []*instance
 
 type postQ [][]string
 
-func processTime(stringTime string) time.Duration {
-	// turn "10 minutes" into ["10"], ["minutes"]
-	splitted := strings.Split(stringTime, " ")
-
-	quantity, _ := strconv.Atoi(splitted[0])
-
-	if splitted[1] == "seconds" || splitted[1] == "second" {
-		return time.Duration(quantity) * time.Second
-	} else if splitted[1] == "minutes" || splitted[1] == "minute" {
-		return time.Duration(quantity) * time.Minute
-	} else if splitted[1] == "hours" || splitted[1] == "hour" {
-		return time.Duration(quantity) * time.Hour
-	}
-
-	return time.Minute
-}
-
-func loadInstances() map[string]*instance {
-	jsonBlob, err := ioutil.ReadFile("offpost.json")
+func loadInstances() allInstances {
+	jsonBlob, err := ioutil.ReadFile("./static/offpost.json")
 	if err != nil {
 		log.Panic("offpost.json not found.")
 	}
-	instancesRaw := make(map[string]struct {
+	instancesRaw := make([]struct {
+		Name               string
 		ImgFolders         []string
 		TimeToQueue        string
 		PostInterval       string
 		PostDelayAtStartup string
 		Platforms          map[string]string
-	})
+	}, 0)
 	_ = json.Unmarshal(jsonBlob, &instancesRaw)
 
-	realInstances := make(map[string]*instance)
-	for key := range instancesRaw {
-		realInstances[key] = &instance{
-			name:               key,
-			imgFolders:         instancesRaw[key].ImgFolders,
-			timeToQueue:        processTime(instancesRaw[key].TimeToQueue),
-			postInterval:       processTime(instancesRaw[key].PostInterval),
-			postDelayAtStartup: instancesRaw[key].PostDelayAtStartup,
-			platforms:          instancesRaw[key].Platforms}
+	realInstances := make(allInstances, 0)
+	for instanceIndex := range instancesRaw {
+		realInstances = append(realInstances, &instance{
+			Name:               instancesRaw[instanceIndex].Name,
+			ImgFolders:         instancesRaw[instanceIndex].ImgFolders,
+			TimeToQueue:        instancesRaw[instanceIndex].TimeToQueue,
+			PostInterval:       instancesRaw[instanceIndex].PostInterval,
+			PostDelayAtStartup: instancesRaw[instanceIndex].PostDelayAtStartup,
+			Platforms:          instancesRaw[instanceIndex].Platforms},
+		)
 	}
 
 	return realInstances
+}
+
+// instance.TimeToQueue and instance.PostInterval are stored as strings,
+// func timetoQueue() and func postInterval() convert string to time duration
+func (instance *instance) timeToQueue() time.Duration {
+	return processTime(instance.TimeToQueue)
+}
+
+func (instance *instance) postInterval() time.Duration {
+	return processTime(instance.PostInterval)
+}
+
+func processTime(stringTime string) time.Duration {
+	dur, _ := time.ParseDuration(stringTime)
+	return dur
+}
+
+func (instance *instance) countQueueItems() int {
+	r, err := os.Open("./" + instance.Name + "_queue.txt")
+	if err != nil {
+		return 0
+	}
+
+	buf := make([]byte, 32*1024)
+	count := 0
+	lineSep := []byte{'\n'}
+
+	for {
+		c, err := r.Read(buf)
+		count += bytes.Count(buf[:c], lineSep)
+
+		switch {
+		case err == io.EOF:
+			return count
+
+		case err != nil:
+			return count
+		}
+	}
 }
 
 func numberAtEnd(filename string) int {
@@ -149,7 +181,7 @@ func groupOrganize(shortQueue [][]string) [][]string {
 }
 
 func (instance *instance) isQueueEmpty() bool {
-	queueInfo, _ := os.Stat(instance.name + "_queue.txt")
+	queueInfo, _ := os.Stat(instance.Name + "_queue.txt")
 	if queueInfo.Size() == 0 {
 		return true
 	}
@@ -157,7 +189,7 @@ func (instance *instance) isQueueEmpty() bool {
 }
 
 func (instance instance) readTxtFile(queueOrPost string, grouped bool) [][]string {
-	f, err := os.OpenFile(instance.name+"_"+queueOrPost+".txt", os.O_RDONLY|os.O_CREATE, 0666)
+	f, err := os.OpenFile(instance.Name+"_"+queueOrPost+".txt", os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -196,7 +228,7 @@ func (instance instance) readTxtFile(queueOrPost string, grouped bool) [][]strin
 
 func (instance *instance) initQueue() {
 
-	for _, folder := range instance.imgFolders {
+	for _, folder := range instance.ImgFolders {
 		// read files from folder
 		var readFromFolder [][]string
 		fileStatus := make(map[string]string) // filename:p for posted, filename:q for queued
@@ -242,7 +274,7 @@ func (instance *instance) initQueue() {
 }
 
 func (instance instance) appendTxtFile(shortQueue [][]string, queueOrPost string) {
-	f, err := os.OpenFile(instance.name+"_"+queueOrPost+".txt", os.O_APPEND|os.O_CREATE, 0666)
+	f, err := os.OpenFile(instance.Name+"_"+queueOrPost+".txt", os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -256,7 +288,7 @@ func (instance instance) appendTxtFile(shortQueue [][]string, queueOrPost string
 
 func (instance *instance) monitorFolder() {
 	// monitor the folder and add new images to the queue
-	// fmt.Printf("\n%v LongQueue: %v\n", instance.name, instance.initQueue())
+	// fmt.Printf("\n%v LongQueue: %v\n", instance.Name, instance.initQueue())
 	instance.initQueue()
 
 	watcher, err := fsnotify.NewWatcher()
@@ -271,25 +303,36 @@ func (instance *instance) monitorFolder() {
 	go func() {
 		var shortQueue [][]string
 
-		queueTimer := time.NewTimer(instance.timeToQueue)
+		queueTimer := time.NewTimer(instance.timeToQueue())
 		queueTimer.Stop()
 
 		var postTimer *time.Timer
 		var postTimerCheck *time.Timer
-		switch instance.postDelayAtStartup {
+		switch instance.PostDelayAtStartup {
 		case "random":
-			rand.Seed(time.Now().UnixNano())
-			randSecondsStr := fmt.Sprint(rand.Intn(int(instance.postInterval.Seconds())))
+			// my funny seed algorithm, mixes part of instance name and the nanosecond time
+			fiveLetters := fmt.Sprint([]byte(instance.Name[:5]))
+			fiveLetters = strings.ReplaceAll(fiveLetters, " ", "")
+			fiveLetters = strings.ReplaceAll(fiveLetters, "[", "")
+			fiveLetters = strings.ReplaceAll(fiveLetters, "]", "")
+			fiveLetters64, _ := strconv.Atoi(fiveLetters)
+			rand.Seed(time.Now().UnixNano() + int64(fiveLetters64))
+			//-----seed algorithm finished-----
+
+			randSecondsStr := fmt.Sprint(rand.Intn(int(instance.postInterval().Seconds())))
 			randSecondsDur, _ := time.ParseDuration(randSecondsStr + "s")
 			postTimer = time.NewTimer(randSecondsDur)
 			// postTimerCheck allows timer.Stop check without stopping main timer
-			postTimerCheck = time.NewTimer(instance.postInterval)
+			postTimerCheck = time.NewTimer(randSecondsDur)
+			instance.NextPostTime = time.Now().Add(randSecondsDur).String() //.UnixNano() / 1000
 		case "full":
-			postTimer = time.NewTimer(instance.postInterval)
-			postTimerCheck = time.NewTimer(instance.postInterval)
+			postTimer = time.NewTimer(instance.postInterval())
+			postTimerCheck = time.NewTimer(instance.postInterval())
+			instance.NextPostTime = time.Now().Add(instance.postInterval()).String() //.UnixNano() / 1000
 		default:
 			postTimer = time.NewTimer(0 * time.Second)
 			postTimerCheck = time.NewTimer(0 * time.Second)
+			instance.NextPostTime = time.Now().String() // int64(0*time.Second) / 1000
 		}
 
 		for {
@@ -314,11 +357,11 @@ func (instance *instance) monitorFolder() {
 					}
 
 					queueTimer.Stop()
-					// fmt.Printf("%v timer stopped\n", instance.name)
-					queueTimer.Reset(instance.timeToQueue)
-					// fmt.Printf("%v timer reset\n", instance.name)
+					// fmt.Printf("%v timer stopped\n", instance.Name)
+					queueTimer.Reset(instance.timeToQueue())
+					// fmt.Printf("%v timer reset\n", instance.Name)
 
-					fmt.Printf("%v New image found\n", instance.name)
+					fmt.Printf("%v New image found\n", instance.Name)
 
 					filetype := filename[strings.LastIndex(filename, "."):]
 
@@ -326,7 +369,7 @@ func (instance *instance) monitorFolder() {
 						shortQueue = append(shortQueue, []string{filename})
 					}
 
-					fmt.Printf("%v Current Images: %v\n\n", instance.name, shortQueue)
+					fmt.Printf("%v Current Images: %v\n\n", instance.Name, shortQueue)
 				case "RENAME":
 					for i := range shortQueue {
 						if shortQueue[i][0] == filename {
@@ -342,15 +385,15 @@ func (instance *instance) monitorFolder() {
 							fmt.Printf("\nremoving %v\n", filename)
 							copy(shortQueue[i:], shortQueue[i+1:])
 							shortQueue = shortQueue[:len(shortQueue)-1]
-							fmt.Printf("%v Current Images: %v\n\n", instance.name, shortQueue)
+							fmt.Printf("%v Current Images: %v\n\n", instance.Name, shortQueue)
 							break
 						}
 					}
 					if len(shortQueue) != 0 {
 						queueTimer.Stop()
-						fmt.Printf("%v timer stopped\n", instance.name)
-						queueTimer.Reset(instance.timeToQueue)
-						fmt.Printf("%v timer reset\n", instance.name)
+						fmt.Printf("%v timer stopped\n", instance.Name)
+						queueTimer.Reset(instance.timeToQueue())
+						fmt.Printf("%v timer reset\n", instance.Name)
 					}
 				} // end of event switch
 
@@ -364,17 +407,19 @@ func (instance *instance) monitorFolder() {
 					isEmpty := instance.isQueueEmpty()
 
 					instance.appendTxtFile(shortQueue, "queue")
-					fmt.Printf("%v queued the Current Images\n", instance.name)
+					instance.ItemsInQueue = instance.countQueueItems()
+					fmt.Printf("%v queued the Current Images, %v items in queue\n", instance.Name, instance.ItemsInQueue)
 
 					if isEmpty && !postTimerCheck.Stop() {
 						instance.makePost()
 						postTimer.Stop()
-						postTimer.Reset(instance.postInterval)
+						postTimer.Reset(instance.postInterval())
 						postTimerCheck.Stop()
-						postTimerCheck.Reset(instance.postInterval)
+						postTimerCheck.Reset(instance.postInterval())
+						instance.NextPostTime = time.Now().Add(instance.postInterval()).String() //.UnixNano() / 1000
 					}
 
-					queueTimer = time.NewTimer(instance.timeToQueue)
+					queueTimer = time.NewTimer(instance.timeToQueue())
 					queueTimer.Stop()
 					shortQueue = [][]string{}
 
@@ -383,19 +428,20 @@ func (instance *instance) monitorFolder() {
 				if !instance.isQueueEmpty() {
 					instance.makePost()
 					postTimer.Stop()
-					postTimer.Reset(instance.postInterval)
+					postTimer.Reset(instance.postInterval())
 					postTimerCheck.Stop()
-					postTimerCheck.Reset(instance.postInterval)
+					postTimerCheck.Reset(instance.postInterval())
+					instance.NextPostTime = time.Now().Add(instance.postInterval()).String() //.UnixNano() / 1000
 					break
 				}
-				fmt.Printf("%v Post Timer done, but the queue is empty.\nNext thing added to queue will be posted immediately.\n", instance.name)
+				fmt.Printf("%v Post Timer done, but the queue is empty.\nNext thing added to queue will be posted immediately.\n", instance.Name)
 
 			} // end of timer switch
 
 		}
 	}()
 
-	for _, folder := range instance.imgFolders {
+	for _, folder := range instance.ImgFolders {
 		err = watcher.Add(folder)
 	}
 
@@ -423,20 +469,21 @@ offpost.json settings loaded.
 	// 	fmt.Printf("  - %v\n", instances[i].name)
 	// }
 
-	for key := range instances {
-		fmt.Println(instances[key].name, "-", instances[key].imgFolders[0])
-		if len(instances[key].imgFolders) > 1 {
-			for i := 1; i < len(instances[key].imgFolders); i++ {
-				for _ = range instances[key].name {
+	for i := range instances {
+		fmt.Println(instances[i].Name, "-", instances[i].ImgFolders[0])
+		if len(instances[i].ImgFolders) > 1 {
+			for i2 := 1; i2 < len(instances[i].ImgFolders); i2++ {
+				for range instances[i].Name {
 					fmt.Print(" ")
 				}
-				fmt.Println(" -", instances[key].imgFolders[i])
+				fmt.Println(" -", instances[i].ImgFolders[i2])
 			}
 		}
 		fmt.Print("\n")
 	}
 
 	fmt.Println("\nType anything to start working.")
+	go systray.Run(onReady, onExit)
 
 	reader := bufio.NewReader(os.Stdin)
 	_, _ = reader.ReadString('\n')
@@ -444,9 +491,47 @@ offpost.json settings loaded.
 	fmt.Println("Initializing post queue and monitoring your folders.")
 	fmt.Println("-------------------------------------------------------------------")
 	fmt.Print("\n")
+
 	for i := range instances {
+		instances[i].ItemsInQueue = instances[i].countQueueItems()
 		go instances[i].monitorFolder()
 	}
 
+	// -------------------------------------------------------------
+	// localhost page for each instance serves the instance config
+	http.HandleFunc("/config", instances.configServer)
+
+	// createLocalhost()
+	http.Handle("/", http.FileServer(http.Dir("./static")))
+	if err := http.ListenAndServe(":8081", nil); err != nil {
+		log.Fatal(err)
+	}
+
 	time.Sleep(10000 * time.Hour)
+}
+
+func (instances allInstances) configServer(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not supported.", http.StatusNotFound)
+		return
+	}
+
+	var instanceList []instance
+
+	for _, instance := range instances {
+		instanceList = append(instanceList, *instance)
+		// fmt.Println(*instance)
+		// fmt.Print("\n\n")
+		// jsond, err := json.MarshalIndent(*instance, "", "/t")
+		// if err != nil {
+		// 	fmt.Println(err)
+		// }
+		// fmt.Fprintf(w, string(jsond))
+	}
+	jsond, err := json.MarshalIndent(instanceList, "", "    ")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Fprintf(w, string(jsond))
+
 }

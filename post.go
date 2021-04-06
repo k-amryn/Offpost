@@ -19,9 +19,9 @@ import (
 	"github.com/ChimeraCoder/anaconda"
 )
 
-func (instance instance) makePost() {
+func (instance *instance) makePost() {
 
-	f, err := os.OpenFile(instance.name+"_queue.txt", os.O_RDWR, 0666)
+	f, err := os.OpenFile(instance.Name+"_queue.txt", os.O_RDWR, 0666)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -38,16 +38,16 @@ func (instance instance) makePost() {
 	theQueue := strings.Split(firstLine, "***")
 
 	data = data[newlineIndex+1:]
-	ioutil.WriteFile(instance.name+"_queue.txt", data, 0666)
+	ioutil.WriteFile(instance.Name+"_queue.txt", data, 0666)
 
-	instance.appendTxtFile([][]string{[]string{firstLine}}, "posted")
+	instance.appendTxtFile([][]string{{firstLine}}, "posted")
 
 	postLinks := make(map[string]string)
 
 	// perform the tweet
-	postLinks["twitter"] = postTweet(theQueue, "", instance.platforms["twitter"])
+	postLinks["twitter"] = postTweet(theQueue, "", instance.Platforms["twitter"])
 	// postLinks["twitter"] = "https://tweetlink/"
-	postLinks["facebook"] = postFacebook(theQueue, "", instance.platforms["facebook"])
+	postLinks["facebook"] = postFacebook(theQueue, "", instance.Platforms["facebook"])
 	// postLinks["facebook"] = "https://facebooklink/"
 
 	for key := range postLinks {
@@ -56,7 +56,7 @@ func (instance instance) makePost() {
 			delete(postLinks, key)
 		}
 	}
-	fmt.Print(instance.name + " is posting: [")
+	fmt.Print(instance.Name + " is posting: [")
 	for i := range theQueue {
 		if i == len(theQueue)-1 {
 			fmt.Print(filepath.Base(theQueue[i]) + "]\n")
@@ -68,6 +68,8 @@ func (instance instance) makePost() {
 	for key := range postLinks {
 		fmt.Print(postLinks[key] + "\n")
 	}
+	instance.ItemsInQueue = instance.countQueueItems()
+	fmt.Println(instance.Name, "-", instance.countQueueItems(), "items in queue")
 	fmt.Print("\n")
 }
 
