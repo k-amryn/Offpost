@@ -36,7 +36,7 @@ type allInstances []*instance
 type postQ [][]string
 
 func loadInstances() allInstances {
-	jsonBlob, err := ioutil.ReadFile("./static/offpost.json")
+	jsonBlob, err := ioutil.ReadFile("./userdata/offpost.json")
 	if err != nil {
 		log.Panic("offpost.json not found.")
 	}
@@ -81,7 +81,7 @@ func processTime(stringTime string) time.Duration {
 }
 
 func (instance *instance) countQueueItems() int {
-	r, err := os.Open("./" + instance.Name + "_queue.txt")
+	r, err := os.Open("./userdata/" + instance.Name + "_queue.txt")
 	if err != nil {
 		return 0
 	}
@@ -181,7 +181,7 @@ func groupOrganize(shortQueue [][]string) [][]string {
 }
 
 func (instance *instance) isQueueEmpty() bool {
-	queueInfo, _ := os.Stat(instance.Name + "_queue.txt")
+	queueInfo, _ := os.Stat("./userdata/" + instance.Name + "_queue.txt")
 	if queueInfo.Size() == 0 {
 		return true
 	}
@@ -189,7 +189,7 @@ func (instance *instance) isQueueEmpty() bool {
 }
 
 func (instance instance) readTxtFile(queueOrPost string, grouped bool) [][]string {
-	f, err := os.OpenFile(instance.Name+"_"+queueOrPost+".txt", os.O_RDONLY|os.O_CREATE, 0666)
+	f, err := os.OpenFile("./userdata/"+instance.Name+"_"+queueOrPost+".txt", os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -274,7 +274,7 @@ func (instance *instance) initQueue() {
 }
 
 func (instance instance) appendTxtFile(shortQueue [][]string, queueOrPost string) {
-	f, err := os.OpenFile(instance.Name+"_"+queueOrPost+".txt", os.O_APPEND|os.O_CREATE, 0666)
+	f, err := os.OpenFile("./userdata/"+instance.Name+"_"+queueOrPost+".txt", os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -503,6 +503,8 @@ offpost.json settings loaded.
 
 	// createLocalhost()
 	http.Handle("/", http.FileServer(http.Dir("./static")))
+	userdata := http.FileServer(http.Dir("./userdata"))
+	http.Handle("/userdata/", http.StripPrefix("/userdata", userdata))
 	if err := http.ListenAndServe(":8081", nil); err != nil {
 		log.Fatal(err)
 	}

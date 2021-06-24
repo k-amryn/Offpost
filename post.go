@@ -21,7 +21,7 @@ import (
 
 func (instance *instance) makePost() {
 
-	f, err := os.OpenFile(instance.Name+"_queue.txt", os.O_RDWR, 0666)
+	f, err := os.OpenFile("./userdata/"+instance.Name+"_queue.txt", os.O_RDWR, 0666)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -38,7 +38,7 @@ func (instance *instance) makePost() {
 	theQueue := strings.Split(firstLine, "***")
 
 	data = data[newlineIndex+1:]
-	ioutil.WriteFile(instance.Name+"_queue.txt", data, 0666)
+	ioutil.WriteFile("./userdata/"+instance.Name+"_queue.txt", data, 0666)
 
 	instance.appendTxtFile([][]string{{firstLine}}, "posted")
 

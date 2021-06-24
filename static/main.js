@@ -28,9 +28,9 @@ const app = Vue.createApp({
             .then(function () {
                 document.querySelector('#home').nextElementSibling.classList.add("after-active")})
             .then(function() {
-                vm.instances[0].Picture = "./coolcars.webp"
-                vm.instances[1].Picture = "./plantgarden.webp"
-                vm.instances[2].Picture = "./johnfunnypic.webp"
+                vm.instances[0].Picture = "/userdata/coolcars.webp"
+                vm.instances[1].Picture = "/userdata/plantgarden.webp"
+                vm.instances[2].Picture = "/userdata/johnfunnypic.webp"
             })
         setInterval(function(){
             fetch('./config')
@@ -39,9 +39,9 @@ const app = Vue.createApp({
                 vm.instances = data
              })
             .then(function() {
-                vm.instances[0].Picture = "./coolcars.webp"
-                vm.instances[1].Picture = "./plantgarden.webp"
-                vm.instances[2].Picture = "./johnfunnypic.webp"
+                vm.instances[0].Picture = "/userdata/coolcars.webp"
+                vm.instances[1].Picture = "/userdata/plantgarden.webp"
+                vm.instances[2].Picture = "/userdata/johnfunnypic.webp"
             })
         }, 2000)
     },
