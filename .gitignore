@@ -1,2 +1,5 @@
 userdata/
 *.exe
+node_modules
+offpost
+build/
