@@ -1,24 +1,7 @@
 <script lang="typescript">
   import Sidebar from './Sidebar.svelte'
-
-  type platform = {
-    facebook: string;
-    twitter: string;
-  }
-  type instance = {
-    Name: string;
-    ImgFolders: string[];
-    TimeToQueue: string;
-    PostInterval: string;
-    PostDelayAtStartup: string;
-    Platforms: platform[]; 
-  }
-
-  let instances: instance[];
-
-  fetch("./offpost.json")
-    .then(response => response.json()).then(data => instances=data);
-  console.log("instances: " + instances)
+  import Homeview from './Homeview.svelte'
+  import { instances, activeInstance } from './stores'
 </script>
 
 <style>
@@ -29,14 +12,21 @@
     height: 700px;
     display: grid;
     grid-template-columns: 100px 1fr;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  #mainview {
+    overflow: hidden;
   }
 </style>
 
 <div id="window-inner">
   <Sidebar />
+
   <div id="mainview">
-    <!-- {#each instances as instance}
-      <p>{instance.Name}</p>
-    {/each} -->
+    {#if $activeInstance === -1}
+      <Homeview />
+    {/if}
   </div>
+
 </div>

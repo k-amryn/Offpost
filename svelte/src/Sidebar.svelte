@@ -1,28 +1,166 @@
-<script lang="ts">
-	let list = [
-		"1",
-		"2",
-		"3",
-		"4",
-		"5",
-		"6",
-		"7"
-	]
+<script lang="typescript">
+  import { instances, activeInstance } from './stores'
+
+  function setActive(instanceIndex: number) {
+    $activeInstance = instanceIndex;
+  }
+
+  function newInstance() {
+    $instances = [...$instances, {
+      Name: "testing" + Math.random().toString(),
+      ImgFolders: [],
+      TimeToQueue: "2 seconds",
+      PostInterval: "5 hours",
+      PostDelayAtStartup: "random",
+      Platforms: {
+          facebook: "haha",
+          twitter: "haha"
+      },
+      ItemsInQueue: 0,
+      NextPostTime: "",
+      Status: "needs-configuring"
+    }]
+  }
 </script>
 
 <style>
-	#container {
-		border-right: 5px solid black;
+  #sidebar-items-and-space {
+    display: grid;
+    grid-template-rows: min-content 1fr;
+    place-items: center;
+    justify-items: center;
+    overflow: auto;
+    scrollbar-width: none;
+    box-sizing: border-box;
+    height: 100%;
+  }
 
-	}
-	.item {
-		display: grid;
-		place-items: center;
-	}
+  #sidebar-items-and-space::-webkit-scrollbar {
+    display: none;
+  }
+
+  #afterspace {
+    border-right: var(--main-border-size);
+    border-top: none;
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  #sidebar {
+    width: 100%;
+    display: grid;
+    place-items: center;
+  }
+
+  .sidebar-item {
+    width: 100%;
+    height: 90px;
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .sidebar-item-inner {
+    width: 70px;
+    height: 70px;
+    border: 2px solid black;
+    border-radius: 7px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+  }
+
+  #home .sidebar-item-inner {
+    border: none;
+  }
+
+  #new-instance .sidebar-item-inner {
+    border: none;
+  }
+
+  #home svg, .sidebar-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .sidebar-item.active {
+    margin-left: -5px;
+  }
+
+  .sidebar-item:not(.active) {
+    cursor: pointer;
+    border-right: var(--main-border-size);
+  }
+
+  .sidebar-borderer {
+    height: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    border-right: var(--main-border-size);
+  }
+
+  .before-active {
+    border-bottom-right-radius: 10px;
+    border-bottom: var(--main-border-size);
+  }
+
+  .after-active {
+    border-top-right-radius: 10px;
+    border-top: var(--main-border-size);
+  }
 </style>
 
-<div id="container">
-	{#each list as item (item)}
-		<div class="item">{item}</div>
-	{/each}
+<div id="sidebar-items-and-space">
+  <div id="sidebar">
+    <div class="none"></div>
+
+    <div id="home" class="sidebar-item"
+      class:active="{ $activeInstance === -1 }"
+      on:click={() => setActive(-1)}>
+      <div class="sidebar-item-inner">
+        <svg version="1.1" viewBox="0 0 15.524 15.749" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(-183.18 -96.312)">
+          <g transform="translate(10.716 13.759)">
+          <g transform="translate(148.38 35.711)">
+          <rect transform="scale(1,-1)" x="24.39" y="-54.292" width="6.9959" height="6.9959" rx=".90915"/>
+          <rect transform="scale(1,-1)" x="32.312" y="-62.137" width="6.9959" height="6.9959" rx=".90915"/>
+          <rect transform="scale(1,-1)" x="24.39" y="-62.137" width="6.9959" height="6.9959" rx=".90915"/>
+          <rect transform="scale(1,-1)" x="32.312" y="-54.292" width="6.9959" height="6.9959" rx=".90915"/>
+          </g>
+          </g>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    { #each $instances as instance, index (instance.Name)}
+      <div class="sidebar-borderer"
+           class:before-active="{ index === $activeInstance }"
+           class:after-active="{ index === $activeInstance + 1 }"></div>
+      <div class="sidebar-item"
+        class:active="{ index === $activeInstance }"
+        on:click={() => setActive(index)}>
+        <div class="sidebar-item-inner">
+          <img src="./testinguserdata/{instance.Name}.webp" alt="{instance.Name} image">
+        </div>
+      </div>
+    { /each }
+
+    <div class="sidebar-borderer" class:after-active="{ $activeInstance === $instances.length-1 }"></div>
+    <div id="new-instance" class="sidebar-item" on:click="{newInstance}">
+      <div class="sidebar-item-inner">
+        <svg width="44.835" height="44.835" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
+         <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
+          <path d="m179.92 177.39v10.341"/>
+          <path d="m185.09 182.56h-10.341"/>
+         </g>
+        </svg>
+      </div>
+    </div>
+
+  </div>
+  <div id="afterspace"></div>
 </div>

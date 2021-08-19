@@ -1,6 +1,14 @@
 :root {
 	--normal-font: 1em;
-	--small-font: 0.7em;
+	--small-font: 0.8em;
+	--main-border-size: 5px solid black;
+
+	/* the color scheme */
+	--red: #de3e39;
+	--green: #41933e;
+	--blue: #315eee;
+	--orange: #f09605;
+	--black: #141414;
 }
 
 html, body {
@@ -10,11 +18,11 @@ html, body {
 }
 
 body {
-	color: #333;
+	color: var(--black);
 	margin: 0;
 	padding: 0px;
 	box-sizing: border-box;
-	font-family: Inter;
+	font-family: 'Inter Medium';
 }
 
 label {

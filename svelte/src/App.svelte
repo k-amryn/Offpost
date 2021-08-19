@@ -1,5 +1,11 @@
-<script lang="ts">
+<script lang="typescript">
 	import MainWindow from './MainWindow.svelte';
+	import { instances } from './stores'
+
+  fetch("./testinguserdata/offpost.json")
+    .then(response => response.json())
+    .then(data => { $instances=data })
+
 </script>
 
 <style>
