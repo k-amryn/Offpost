@@ -1,7 +1,8 @@
 <script lang="typescript">
   import Sidebar from './Sidebar.svelte'
   import Homeview from './Homeview.svelte'
-  import { instances, activeInstance } from './stores'
+  import Instanceview from './Instanceview.svelte'
+  import { activeInstance } from './stores'
 </script>
 
 <style>
@@ -26,6 +27,8 @@
   <div id="mainview">
     {#if $activeInstance === -1}
       <Homeview />
+    {:else}
+      <Instanceview />
     {/if}
   </div>
 
