@@ -1,3 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
-vue.global.js linguist-vendored
+
+# static directory contains abandoned GUI code. This line
+# prevents it from being counted in the Github language stats
+static/* linguist-vendored
