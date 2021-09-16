@@ -1,4 +1,4 @@
-module localhost
+module offpost
 
 go 1.16
 

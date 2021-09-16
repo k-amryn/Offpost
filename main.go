@@ -33,8 +33,6 @@ type instance struct {
 
 type allInstances []*instance
 
-type postQ [][]string
-
 func loadInstances() allInstances {
 	jsonBlob, err := ioutil.ReadFile("./userdata/offpost.json")
 	if err != nil {
@@ -106,7 +104,7 @@ func (instance *instance) countQueueItems() int {
 
 func numberAtEnd(filename string) int {
 	filename = filename[:strings.LastIndex(filename, ".")]
-	rgx, err := regexp.Compile("-\\d{1,3}$")
+	rgx, err := regexp.Compile(`-\d{1,3}$`)
 	if err != nil {
 		return -1
 	}
@@ -125,7 +123,7 @@ func numberAtEnd(filename string) int {
 // get the filename minus end numbers and file extension
 func getBaseName(filename string) string {
 	filename = filename[:strings.LastIndex(filename, ".")]
-	rgx, err := regexp.Compile("-\\d{1,3}$")
+	rgx, err := regexp.Compile(`-\d{1,3}$`)
 	if err != nil {
 		return ""
 	}
@@ -182,10 +180,7 @@ func groupOrganize(shortQueue [][]string) [][]string {
 
 func (instance *instance) isQueueEmpty() bool {
 	queueInfo, _ := os.Stat("./userdata/" + instance.Name + "_queue.txt")
-	if queueInfo.Size() == 0 {
-		return true
-	}
-	return false
+	return queueInfo.Size() == 0
 }
 
 func (instance instance) readTxtFile(queueOrPost string, grouped bool) [][]string {
@@ -227,10 +222,8 @@ func (instance instance) readTxtFile(queueOrPost string, grouped bool) [][]strin
 }
 
 func (instance *instance) initQueue() {
-
 	for _, folder := range instance.ImgFolders {
 		// read files from folder
-		var readFromFolder [][]string
 		fileStatus := make(map[string]string) // filename:p for posted, filename:q for queued
 		files, _ := ioutil.ReadDir(folder)
 
@@ -245,8 +238,6 @@ func (instance *instance) initQueue() {
 
 			filetype := file.Name()[dotIndex:]
 			if filetype == ".jpg" || filetype == ".png" || filetype == ".webp" || filetype == ".txt" || filetype == ".mp4" {
-				readFromFolder = append(readFromFolder,
-					[]string{filepath})
 				fileStatus[filepath] = "n"
 			}
 		}
@@ -339,7 +330,7 @@ func (instance *instance) monitorFolder() {
 
 			// this select waits for either a new file, or a shortQueue timer to expire
 			select {
-			case event, _ := <-watcher.Events:
+			case event := <-watcher.Events:
 				tweetlink := "Tweet error/n"
 
 				// event.Name returns full filepath, this isolates the filename
@@ -443,6 +434,9 @@ func (instance *instance) monitorFolder() {
 
 	for _, folder := range instance.ImgFolders {
 		err = watcher.Add(folder)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	<-done
@@ -502,7 +496,7 @@ offpost.json settings loaded.
 	http.HandleFunc("/config", instances.configServer)
 
 	// createLocalhost()
-	http.Handle("/", http.FileServer(http.Dir("./static")))
+	http.Handle("/", http.FileServer(http.Dir("./svelte/public")))
 	userdata := http.FileServer(http.Dir("./userdata"))
 	http.Handle("/userdata/", http.StripPrefix("/userdata", userdata))
 	if err := http.ListenAndServe(":8081", nil); err != nil {
@@ -534,6 +528,6 @@ func (instances allInstances) configServer(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Fprintf(w, string(jsond))
+	fmt.Fprint(w, string(jsond))
 
 }
