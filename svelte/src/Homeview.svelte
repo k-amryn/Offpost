@@ -1,5 +1,5 @@
 <script lang="typescript">
-	import { instances, activeInstance } from './stores'
+	import { ginstances, activeInstance } from './stores'
 
 	function setActive(instanceIndex: number) {
 		$activeInstance = instanceIndex
@@ -105,7 +105,7 @@
 		</svg>
 	</div>
 	<div id="content">
-		{ #each $instances as instance, i (instance.Name) }
+		{ #each $ginstances as instance, i (instance.Name) }
 			<div class="instance" on:click="{() => setActive(i)}">
 
 				<div class="instance-img">

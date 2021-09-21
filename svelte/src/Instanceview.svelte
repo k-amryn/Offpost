@@ -1,8 +1,8 @@
 <script lang="typescript">
-  import { instances, activeInstance } from './stores'
+  import { ginstances, activeInstance } from './stores'
 
   let advanced: boolean = false
-  $: instance = $instances[$activeInstance]
+  $: instance = $ginstances[$activeInstance]
 
   function addFolder() {
     instance.ImgFolders = [...instance.ImgFolders, ""]
@@ -14,7 +14,7 @@
   }
 
   function addVariable(variable: string) {
-    let captionInput: HTMLInputElement = document.querySelector('.caption-input')
+    let captionInput: HTMLInputElement = document.querySelector('.caption-input')!
     switch (variable) {
       case 'filename':
           captionInput.value += "%{filename}";
@@ -28,20 +28,9 @@
     }
   }
 
-  function changeCounter(targetClass: string, increasing: boolean) {
-    let item: HTMLInputElement = document.querySelector(targetClass + " input");
-    let itemValue: number = +item.value;
-
-    if (isNaN(itemValue)) {
-      itemValue = 0
-    }
-    
-    if (increasing) {
-      itemValue += 1
-    } else {
-      itemValue -= 1
-    }
-    item.value = itemValue.toString()
+  // used to ensure number inputs are only numbers
+  function filterNonDigits(e: any) {
+    e.target.value = e.target.value.replace(/\D/, '')
   }
 </script>
 
@@ -118,7 +107,8 @@
     border: 2px solid black;
     border-radius: 5px;
     height: 36px;
-    padding-bottom: 8px;
+    padding-top: 0px;
+    padding-bottom: 0px;
   }
 
   select, button {
@@ -164,6 +154,7 @@
 
   .counter input {
     text-align: center;
+    border-radius: 0px !important;
   }
 
   .post-delay, .queue-delay {
@@ -256,9 +247,9 @@
     <div class="setting-section">
       <div class="setting-label">Folders:</div>
       <div class="setting-content">
-        {#each instance.ImgFolders as folder, i (folder + Math.random().toString())}
-          <div class="folder-row">
-            <input class="folder-input" bind:value={folder} on:input={() => {}}>
+        {#each instance.ImgFolders as folder, i}
+        <div class="folder-row">
+            <input class="folder-input" bind:value={folder}>
             <div class="svg-holder">
               <svg width="18px" style="margin-bottom: 12px;" viewBox="0 0 25 21" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5">
                 <path d="M2412 271v31h47v-26h-25l-4-5h-18z" fill="none" stroke="#000" stroke-width="5.8" transform="matrix(.45762 0 0 .56483 -1102 -151)"/>
@@ -339,15 +330,15 @@
       <div class="setting-label">Post Delay:</div>
       <div class="setting-content post-delay">
         <div class="counter">
-          <div on:click={() => changeCounter('.post-delay', false)} class="minus">
+          <div on:click={() => {if (instance.PostInterval.num > 0) instance.PostInterval.num-=1} } class="minus">
             <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
               <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
                 <path d="m185.09 182.56h-10.341"/>
               </g>
             </svg>
           </div>
-          <input style="border-radius: 0px;" value="0">
-          <div on:click={() => changeCounter('.post-delay', true)} class="plus">
+          <input on:input={e => filterNonDigits(e) } bind:value={ instance.PostInterval.num }>
+          <div on:click={() => instance.PostInterval.num+=1 } class="plus">
             <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
               <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
                 <path d="m179.92 177.39v10.341"/>
@@ -356,7 +347,7 @@
             </svg>
           </div>
         </div>
-        <select>
+        <select bind:value={ instance.PostInterval.unit }>
           <option>minutes</option>
           <option>hours</option>
           <option>days</option>
@@ -382,15 +373,15 @@
         <div class="setting-label">Queue Delay:</div>
         <div class="setting-content queue-delay">
           <div class="counter">
-            <div on:click={() => changeCounter('.queue-delay', false)} class="minus">
+            <div on:click={() => {if (instance.TimeToQueue.num > 0) instance.TimeToQueue.num-=1} } class="minus">
               <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
                 <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
                   <path d="m185.09 182.56h-10.341"/>
                 </g>
               </svg>
             </div>
-            <input style="border-radius: 0px;" value="0">
-            <div on:click={() => changeCounter('.queue-delay', true)} class="plus">
+            <input on:input={e => filterNonDigits(e) } style="border-radius: 0px;" bind:value={instance.TimeToQueue.num}>
+            <div on:click={() => instance.TimeToQueue.num+=1 } class="plus">
               <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
                 <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
                   <path d="m179.92 177.39v10.341"/>
@@ -409,10 +400,12 @@
       <div class="setting-section">
         <div class="setting-label">Startup Delay:</div>
         <div class="setting-content">
-          <select>
-            <option>Random</option>
-            <option>Full</option>
-            <option>None</option>
+          <select bind:value={ instance.PostDelayAtStartup }>
+            <!-- On startup, attempt posting at the NextPostTime. If the NextPostTime has passed, 
+            then use this option. -->
+            <option value="random">Random</option>
+            <option value="full">Full</option>
+            <option value="none">None</option>
           </select>
         </div>
       </div>

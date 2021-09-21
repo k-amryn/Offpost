@@ -1,16 +1,16 @@
 <script lang="typescript">
-  import { instances, activeInstance } from './stores'
+  import { ginstances, activeInstance } from './stores'
 
   function setActive(instanceIndex: number) {
     $activeInstance = instanceIndex;
   }
 
   function newInstance() {
-    $instances = [...$instances, {
+    $ginstances = [...$ginstances, {
       Name: "testing" + Math.random().toString(),
       ImgFolders: [],
-      TimeToQueue: "2 seconds",
-      PostInterval: "5 hours",
+      TimeToQueue: {num: 30, unit: "seconds"},
+      PostInterval: {num: 5, unit: "hours"},
       PostDelayAtStartup: "random",
       Platforms: {
           facebook: "haha",
@@ -136,7 +136,7 @@
       </div>
     </div>
 
-    { #each $instances as instance, index (instance.Name)}
+    { #each $ginstances as instance, index (instance.Name)}
       <div class="sidebar-borderer"
            class:before-active="{ index === $activeInstance }"
            class:after-active="{ index === $activeInstance + 1 }"></div>
@@ -149,7 +149,7 @@
       </div>
     { /each }
 
-    <div class="sidebar-borderer" class:after-active="{ $activeInstance === $instances.length-1 }"></div>
+    <div class="sidebar-borderer" class:after-active="{ $activeInstance === $ginstances.length-1 }"></div>
     <div id="new-instance" class="sidebar-item" on:click="{newInstance}">
       <div class="sidebar-item-inner">
         <svg width="44.835" height="44.835" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
