@@ -477,10 +477,10 @@ offpost.json settings loaded.
 	}
 
 	fmt.Println("\nType anything to start working.")
-	go systray.Run(onReady, onExit)
 
 	reader := bufio.NewReader(os.Stdin)
 	_, _ = reader.ReadString('\n')
+	go systray.Run(onReady, onExit)
 
 	fmt.Println("Initializing post queue and monitoring your folders.")
 	fmt.Println("-------------------------------------------------------------------")
