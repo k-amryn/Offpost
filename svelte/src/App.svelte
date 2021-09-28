@@ -2,9 +2,11 @@
 	import MainWindow from './MainWindow.svelte';
 	import { ginstances } from './stores'
 
-  fetch("./testinguserdata/offpost.json")
-    .then(response => response.json())
-    .then(data => { $ginstances = toGInst(data) })
+  var serversocket = new WebSocket("ws://localhost:8081/config");
+
+  serversocket.onmessage = function(e) {
+      $ginstances = toGInst(JSON.parse(e.data))
+  };
   
   // returns Go time '10h' as ['10', 'hours']
   function separateTimeUnit(original: string): {num: number, unit: string} {

@@ -18,6 +18,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/getlantern/systray"
+	"github.com/gorilla/websocket"
 )
 
 type instance struct {
@@ -32,6 +33,8 @@ type instance struct {
 }
 
 type allInstances []*instance
+
+var wsSend = make(chan string)
 
 func loadInstances() allInstances {
 	jsonBlob, err := ioutil.ReadFile("./userdata/offpost.json")
@@ -410,6 +413,8 @@ func (instance *instance) monitorFolder() {
 						instance.NextPostTime = time.Now().Add(instance.postInterval()).String() //.UnixNano() / 1000
 					}
 
+					wsSend <- ""
+
 					queueTimer = time.NewTimer(instance.timeToQueue())
 					queueTimer.Stop()
 					shortQueue = [][]string{}
@@ -423,6 +428,9 @@ func (instance *instance) monitorFolder() {
 					postTimerCheck.Stop()
 					postTimerCheck.Reset(instance.postInterval())
 					instance.NextPostTime = time.Now().Add(instance.postInterval()).String() //.UnixNano() / 1000
+
+					wsSend <- ""
+
 					break
 				}
 				fmt.Printf("%v Post Timer done, but the queue is empty.\nNext thing added to queue will be posted immediately.\n", instance.Name)
@@ -491,9 +499,9 @@ offpost.json settings loaded.
 		go instances[i].monitorFolder()
 	}
 
-	// -------------------------------------------------------------
-	// localhost page for each instance serves the instance config
-	http.HandleFunc("/config", instances.configServer)
+	// -----------------------------------------
+	// this websocket serves instance config whenever
+	http.HandleFunc("/config", instances.createWebSocket)
 
 	// createLocalhost()
 	http.Handle("/", http.FileServer(http.Dir("./svelte/public")))
@@ -506,28 +514,32 @@ offpost.json settings loaded.
 	time.Sleep(10000 * time.Hour)
 }
 
-func (instances allInstances) configServer(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method not supported.", http.StatusNotFound)
-		return
+func (instances allInstances) createWebSocket(w http.ResponseWriter, r *http.Request) {
+	var upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
 	}
+	conn, _ := upgrader.Upgrade(w, r, nil)
 
-	var instanceList []instance
+	// sends to the GUI, when wsSend is fed a string
+	go func() {
+		for {
+			err := conn.WriteJSON(instances)
+			if err != nil {
+				return
+			}
 
-	for _, instance := range instances {
-		instanceList = append(instanceList, *instance)
-		// fmt.Println(*instance)
-		// fmt.Print("\n\n")
-		// jsond, err := json.MarshalIndent(*instance, "", "/t")
-		// if err != nil {
-		// 	fmt.Println(err)
-		// }
-		// fmt.Fprintf(w, string(jsond))
+			<-wsSend
+		}
+	}()
+
+	// reads from the GUI
+	for {
+		_, p, err := conn.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		fmt.Println("Received:", string(p))
 	}
-	jsond, err := json.MarshalIndent(instanceList, "", "    ")
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Fprint(w, string(jsond))
-
 }
