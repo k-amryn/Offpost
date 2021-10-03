@@ -29,7 +29,7 @@ type instance struct {
 	PostDelayAtStartup string            `json:"PostDelayAtStartup"`
 	Platforms          map[string]string `json:"Platforms"`
 	ItemsInQueue       int               `json:"ItemsInQueue"`
-	NextPostTime       string            `json:"NextPostTime"`
+	NextPostTime       int64             `json:"NextPostTime"`
 }
 
 type allInstances []*instance
@@ -186,7 +186,7 @@ func (instance *instance) isQueueEmpty() bool {
 	return queueInfo.Size() == 0
 }
 
-func (instance instance) readTxtFile(queueOrPost string, grouped bool) [][]string {
+func (instance *instance) readTxtFile(queueOrPost string, grouped bool) [][]string {
 	f, err := os.OpenFile("./userdata/"+instance.Name+"_"+queueOrPost+".txt", os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Println(err)
@@ -267,7 +267,7 @@ func (instance *instance) initQueue() {
 	}
 }
 
-func (instance instance) appendTxtFile(shortQueue [][]string, queueOrPost string) {
+func (instance *instance) appendTxtFile(shortQueue [][]string, queueOrPost string) {
 	f, err := os.OpenFile("./userdata/"+instance.Name+"_"+queueOrPost+".txt", os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Println(err)
@@ -318,15 +318,15 @@ func (instance *instance) monitorFolder() {
 			postTimer = time.NewTimer(randSecondsDur)
 			// postTimerCheck allows timer.Stop check without stopping main timer
 			postTimerCheck = time.NewTimer(randSecondsDur)
-			instance.NextPostTime = time.Now().Add(randSecondsDur).String() //.UnixNano() / 1000
+			instance.NextPostTime = time.Now().Add(randSecondsDur).UnixMilli()
 		case "full":
 			postTimer = time.NewTimer(instance.postInterval())
 			postTimerCheck = time.NewTimer(instance.postInterval())
-			instance.NextPostTime = time.Now().Add(instance.postInterval()).String() //.UnixNano() / 1000
+			instance.NextPostTime = time.Now().Add(instance.postInterval()).UnixMilli()
 		default:
 			postTimer = time.NewTimer(0 * time.Second)
 			postTimerCheck = time.NewTimer(0 * time.Second)
-			instance.NextPostTime = time.Now().String() // int64(0*time.Second) / 1000
+			instance.NextPostTime = time.Now().UnixMilli()
 		}
 
 		for {
@@ -410,7 +410,7 @@ func (instance *instance) monitorFolder() {
 						postTimer.Reset(instance.postInterval())
 						postTimerCheck.Stop()
 						postTimerCheck.Reset(instance.postInterval())
-						instance.NextPostTime = time.Now().Add(instance.postInterval()).String() //.UnixNano() / 1000
+						instance.NextPostTime = time.Now().Add(instance.postInterval()).UnixMilli()
 					}
 
 					wsSend <- ""
@@ -427,7 +427,7 @@ func (instance *instance) monitorFolder() {
 					postTimer.Reset(instance.postInterval())
 					postTimerCheck.Stop()
 					postTimerCheck.Reset(instance.postInterval())
-					instance.NextPostTime = time.Now().Add(instance.postInterval()).String() //.UnixNano() / 1000
+					instance.NextPostTime = time.Now().Add(instance.postInterval()).UnixMilli()
 
 					wsSend <- ""
 
@@ -500,7 +500,7 @@ offpost.json settings loaded.
 	}
 
 	// -----------------------------------------
-	// this websocket serves instance config whenever
+	// this websocket serves instance config whenever something is posted or queued
 	http.HandleFunc("/config", instances.createWebSocket)
 
 	// createLocalhost()

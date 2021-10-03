@@ -119,7 +119,7 @@
 							<span class="needs-configuring">Needs configuring</span>
 						{:else if instance.ItemsInQueue > 0}
 							<span class="queued">{instance.ItemsInQueue} items in queue<br>
-								Next post at {instance.NextPostTime}<br></span>
+								Next post {instance.NextPostTime}<br></span>
 						{:else if instance.ItemsInQueue === 0}
 							<span class="waiting">Waiting for new image</span>
 						{/if}

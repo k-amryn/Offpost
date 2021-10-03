@@ -9,7 +9,7 @@ type instance = {
   PostDelayAtStartup: string;
   Platforms: {facebook:string, twitter: string}; 
   ItemsInQueue: number;
-  NextPostTime: string;
+  NextPostTime: number;
   Status?: string;
 }
 

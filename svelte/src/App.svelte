@@ -29,6 +29,38 @@
     return {num: +num, unit: unit}
   }
 
+  function dateFromUnixTime(nu: number): string {
+    const date = new Date(nu)
+    const datearr = date.toString().split(" ")
+
+    const nowDate = new Date()
+    const nowDateArr = nowDate.toString().split(" ")
+
+    let fulldate: string = ""
+    if (datearr[1] === nowDateArr[1] &&
+    +datearr[2]-1 === +nowDateArr[2] &&
+    datearr[3] === nowDateArr[3]) {
+      fulldate = 'tomorrow '
+    } else if (datearr.slice(1,4).every((e, i) => e === nowDateArr.slice(1,4)[i] ) ) {
+      fulldate = ""
+    } else {
+      fulldate = datearr[1] + " " + datearr[2] + ", " + datearr[3] + " "
+    }
+
+    let time = datearr[4].split(":")
+    let ampm = "am"
+
+    ampm = +time[0] > 11 ? 'pm' : 'am'
+    time[0] = +time[0] === 0 ? '12' : time[0]
+    time[0] = +time[0] > 12 ? (+time[0] - 12).toString() : time[0]
+    time[0] = time[0][0] === '0' ? time[0].slice(-1) : time[0]
+
+    fulldate += "at " + time[0] + ":" + time[1] + ampm
+
+    return fulldate
+  }
+
+
   function toGInst(data: any[]): any[] {
     data.forEach(e => {
       e.Name = e.Name
@@ -38,7 +70,7 @@
       e.PostDelayAtStartup = e.PostDelayAtStartup
       e.Platforms = e.Platforms
       e.ItemsInQueue = e.ItemsInQueue
-      e.NextPostTime = e.NextPostTime
+      e.NextPostTime = dateFromUnixTime(e.NextPostTime)
       e.Status = e.Status
     })
     return data
