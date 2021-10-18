@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -32,11 +32,16 @@ type instance struct {
 	NextPostTime       int64             `json:"NextPostTime"`
 }
 
-type allInstances []*instance
+type allInstances struct {
+	c []*instance
+	// mutex ensures only one instance can post at a time
+	mu sync.Mutex
+}
 
-var wsSend = make(chan string)
+var wsSend = make(chan string, 1)
+var guiOpen = false
 
-func loadInstances() allInstances {
+func loadInstances() []*instance {
 	jsonBlob, err := ioutil.ReadFile("./userdata/offpost.json")
 	if err != nil {
 		log.Panic("offpost.json not found.")
@@ -51,7 +56,7 @@ func loadInstances() allInstances {
 	}, 0)
 	_ = json.Unmarshal(jsonBlob, &instancesRaw)
 
-	realInstances := make(allInstances, 0)
+	realInstances := make([]*instance, 0)
 	for instanceIndex := range instancesRaw {
 		realInstances = append(realInstances, &instance{
 			Name:               instancesRaw[instanceIndex].Name,
@@ -64,6 +69,52 @@ func loadInstances() allInstances {
 	}
 
 	return realInstances
+}
+
+func (instances *allInstances) initQueue() {
+	for _, instance := range instances.c {
+		for _, folder := range instance.ImgFolders {
+			// read files from folder
+			fileStatus := make(map[string]string) // filename:p for posted, filename:q for queued
+			files, _ := ioutil.ReadDir(folder)
+
+			for _, file := range files {
+				dotIndex := strings.LastIndex(file.Name(), ".")
+				// if the directory entry is a folder
+				if dotIndex == -1 {
+					continue
+				}
+
+				filepath := folder + "/" + file.Name()
+
+				filetype := file.Name()[dotIndex:]
+				if filetype == ".jpg" || filetype == ".png" || filetype == ".webp" || filetype == ".txt" || filetype == ".mp4" {
+					fileStatus[filepath] = "n"
+				}
+			}
+
+			readFromFile := instance.readTxtFile("queue", false)
+			for _, val := range readFromFile {
+				fileStatus[val[0]] = "q"
+			}
+
+			readFromFile = instance.readTxtFile("posted", false)
+			for _, val := range readFromFile {
+				fileStatus[val[0]] = "p"
+			}
+
+			var newQueue [][]string
+			for key, value := range fileStatus {
+				if value == "n" {
+					newQueue = append(newQueue, []string{key})
+				}
+			}
+
+			newQueue = groupOrganize(newQueue)
+			instance.appendTxtFile(newQueue, "queue")
+		}
+
+	}
 }
 
 // instance.TimeToQueue and instance.PostInterval are stored as strings,
@@ -224,49 +275,6 @@ func (instance *instance) readTxtFile(queueOrPost string, grouped bool) [][]stri
 	return readFromFile
 }
 
-func (instance *instance) initQueue() {
-	for _, folder := range instance.ImgFolders {
-		// read files from folder
-		fileStatus := make(map[string]string) // filename:p for posted, filename:q for queued
-		files, _ := ioutil.ReadDir(folder)
-
-		for _, file := range files {
-			dotIndex := strings.LastIndex(file.Name(), ".")
-			// if the directory entry is a folder
-			if dotIndex == -1 {
-				continue
-			}
-
-			filepath := folder + "/" + file.Name()
-
-			filetype := file.Name()[dotIndex:]
-			if filetype == ".jpg" || filetype == ".png" || filetype == ".webp" || filetype == ".txt" || filetype == ".mp4" {
-				fileStatus[filepath] = "n"
-			}
-		}
-
-		readFromFile := instance.readTxtFile("queue", false)
-		for _, val := range readFromFile {
-			fileStatus[val[0]] = "q"
-		}
-
-		readFromFile = instance.readTxtFile("posted", false)
-		for _, val := range readFromFile {
-			fileStatus[val[0]] = "p"
-		}
-
-		var newQueue [][]string
-		for key, value := range fileStatus {
-			if value == "n" {
-				newQueue = append(newQueue, []string{key})
-			}
-		}
-
-		newQueue = groupOrganize(newQueue)
-		instance.appendTxtFile(newQueue, "queue")
-	}
-}
-
 func (instance *instance) appendTxtFile(shortQueue [][]string, queueOrPost string) {
 	f, err := os.OpenFile("./userdata/"+instance.Name+"_"+queueOrPost+".txt", os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
@@ -280,10 +288,8 @@ func (instance *instance) appendTxtFile(shortQueue [][]string, queueOrPost strin
 	}
 }
 
-func (instance *instance) monitorFolder() {
-	// monitor the folder and add new images to the queue
-	// fmt.Printf("\n%v LongQueue: %v\n", instance.Name, instance.initQueue())
-	instance.initQueue()
+// monitors folders, manages queueing and posting
+func (instance *instance) monitorFolder(readySend chan string, all *allInstances) {
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -329,6 +335,9 @@ func (instance *instance) monitorFolder() {
 			instance.NextPostTime = time.Now().UnixMilli()
 		}
 
+		readySend <- instance.Name
+
+		guiSend := make(chan string, 1)
 		for {
 
 			// this select waits for either a new file, or a shortQueue timer to expire
@@ -395,6 +404,7 @@ func (instance *instance) monitorFolder() {
 					fmt.Println(tweetlink)
 				}
 			case <-queueTimer.C:
+				all.mu.Lock()
 				if len(shortQueue) != 0 {
 					shortQueue = groupOrganize(shortQueue)
 
@@ -402,7 +412,7 @@ func (instance *instance) monitorFolder() {
 
 					instance.appendTxtFile(shortQueue, "queue")
 					instance.ItemsInQueue = instance.countQueueItems()
-					fmt.Printf("%v queued the Current Images, %v items in queue\n", instance.Name, instance.ItemsInQueue)
+					fmt.Printf("%v queued the Current Images, %v items in queue\n\n", instance.Name, instance.ItemsInQueue)
 
 					if isEmpty && !postTimerCheck.Stop() {
 						instance.makePost()
@@ -413,14 +423,16 @@ func (instance *instance) monitorFolder() {
 						instance.NextPostTime = time.Now().Add(instance.postInterval()).UnixMilli()
 					}
 
-					wsSend <- ""
+					guiSend <- ""
 
 					queueTimer = time.NewTimer(instance.timeToQueue())
 					queueTimer.Stop()
 					shortQueue = [][]string{}
 
 				}
+				all.mu.Unlock()
 			case <-postTimer.C:
+				all.mu.Lock()
 				if !instance.isQueueEmpty() {
 					instance.makePost()
 					postTimer.Stop()
@@ -429,11 +441,19 @@ func (instance *instance) monitorFolder() {
 					postTimerCheck.Reset(instance.postInterval())
 					instance.NextPostTime = time.Now().Add(instance.postInterval()).UnixMilli()
 
-					wsSend <- ""
+					guiSend <- ""
+					all.mu.Unlock()
 
 					break
 				}
-				fmt.Printf("%v Post Timer done, but the queue is empty.\nNext thing added to queue will be posted immediately.\n", instance.Name)
+				fmt.Printf("%v Post Timer done, but the queue is empty.\nNext thing added to queue will be posted immediately.\n\n", instance.Name)
+				all.mu.Unlock()
+			case <-guiSend:
+				all.mu.Lock()
+				if guiOpen {
+					wsSend <- ""
+				}
+				all.mu.Unlock()
 
 			} // end of timer switch
 
@@ -451,7 +471,8 @@ func (instance *instance) monitorFolder() {
 }
 
 func main() {
-	instances := loadInstances()
+	instances := allInstances{c: loadInstances()}
+	instances.initQueue()
 	fmt.Print(` _______  _______  _______  _______  _______  _______ _________
 (  ___  )(  ____ \(  ____ \(  ____ )(  ___  )(  ____ \\__   __/
 | (   ) || (    \/| (    \/| (    )|| (   ) || (    \/   ) (
@@ -471,14 +492,14 @@ offpost.json settings loaded.
 	// 	fmt.Printf("  - %v\n", instances[i].name)
 	// }
 
-	for i := range instances {
-		fmt.Println(instances[i].Name, "-", instances[i].ImgFolders[0])
-		if len(instances[i].ImgFolders) > 1 {
-			for i2 := 1; i2 < len(instances[i].ImgFolders); i2++ {
-				for range instances[i].Name {
+	for i := range instances.c {
+		fmt.Println(instances.c[i].Name, "-", instances.c[i].ImgFolders[0])
+		if len(instances.c[i].ImgFolders) > 1 {
+			for i2 := 1; i2 < len(instances.c[i].ImgFolders); i2++ {
+				for range instances.c[i].Name {
 					fmt.Print(" ")
 				}
-				fmt.Println(" -", instances[i].ImgFolders[i2])
+				fmt.Println(" -", instances.c[i].ImgFolders[i2])
 			}
 		}
 		fmt.Print("\n")
@@ -486,17 +507,21 @@ offpost.json settings loaded.
 
 	fmt.Println("\nType anything to start working.")
 
-	reader := bufio.NewReader(os.Stdin)
-	_, _ = reader.ReadString('\n')
+	// reader := bufio.NewReader(os.Stdin)
+	// _, _ = reader.ReadString('\n')
 	go systray.Run(onReady, onExit)
 
 	fmt.Println("Initializing post queue and monitoring your folders.")
+	fmt.Println("GUI on http://localhost:8081/")
 	fmt.Println("-------------------------------------------------------------------")
 	fmt.Print("\n")
 
-	for i := range instances {
-		instances[i].ItemsInQueue = instances[i].countQueueItems()
-		go instances[i].monitorFolder()
+	// readySend ensures the instance data is gathered before sending to GUI
+	readySend := make(chan string)
+	for i := range instances.c {
+		instances.c[i].ItemsInQueue = instances.c[i].countQueueItems()
+		go instances.c[i].monitorFolder(readySend, &instances)
+		<-readySend
 	}
 
 	// -----------------------------------------
@@ -511,25 +536,40 @@ offpost.json settings loaded.
 		log.Fatal(err)
 	}
 
-	time.Sleep(10000 * time.Hour)
+	// <-stayOpen makes the program stay open since no value is sent to the channel
+	stayOpen := make(chan int)
+	<-stayOpen
 }
 
-func (instances allInstances) createWebSocket(w http.ResponseWriter, r *http.Request) {
+func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Request) {
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 	}
 	conn, _ := upgrader.Upgrade(w, r, nil)
+	clientClosed := make(chan bool)
+
+	instances.mu.Lock()
+	guiOpen = true
+	instances.mu.Unlock()
+	fmt.Print("GUI opening\n\n")
+
+	wsSend <- ""
 
 	// sends to the GUI, when wsSend is fed a string
 	go func() {
 		for {
-			err := conn.WriteJSON(instances)
-			if err != nil {
+			select {
+			case <-wsSend:
+				err := conn.WriteJSON(instances.c)
+				if err != nil {
+					fmt.Println(err)
+				}
+			case <-clientClosed:
+				// exit writer function when ReadMessage says client is closed
 				return
 			}
 
-			<-wsSend
 		}
 	}()
 
@@ -537,6 +577,12 @@ func (instances allInstances) createWebSocket(w http.ResponseWriter, r *http.Req
 	for {
 		_, p, err := conn.ReadMessage()
 		if err != nil {
+			instances.mu.Lock()
+			// ReadMessage returns err when client closes
+			clientClosed <- true
+			fmt.Print("GUI closing\n\n")
+			guiOpen = false
+			instances.mu.Unlock()
 			return
 		}
 

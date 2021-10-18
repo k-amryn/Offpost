@@ -5,7 +5,7 @@
   var serversocket = new WebSocket("ws://localhost:8081/config");
 
   serversocket.onmessage = function(e) {
-      $ginstances = toGInst(JSON.parse(e.data))
+    $ginstances = toGInst(JSON.parse(e.data))
   };
   
   // returns Go time '10h' as ['10', 'hours']
