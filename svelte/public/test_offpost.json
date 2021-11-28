@@ -1,0 +1,48 @@
+[{
+        "Name": "coolcars",
+        "ImgFolders": [
+            "C:/path/to/folder/coolcars",
+            "C:/path/to/folder/coolcars2"
+        ],
+        "TimeToQueue": "4s",
+        "PostInterval": "1m",
+        "PostDelayAtStartup": "full",
+        "Platforms": {
+            "twitter": "facebook***placeholder***data",
+            "facebook": "twitter***placeholder***data"
+        },
+        "ItemsInQueue": 0,
+        "NextPostTime": 1637855092459
+    },
+    {
+        "Name": "plantgarden",
+        "ImgFolders": [
+            "C:/path/to/folder/plantgarden",
+            "C:/path/to/folder/plantgarden2"
+        ],
+        "TimeToQueue": "4s",
+        "PostInterval": "2h",
+        "PostDelayAtStartup": "full",
+        "Platforms": {
+            "tumblr": "facebook***placeholder***data",
+            "twitter": "twitter***placeholder***data"
+        },
+        "ItemsInQueue": 0,
+        "NextPostTime": 1637855092461
+    },
+    {
+        "Name": "johnfunnypic",
+        "ImgFolders": [
+            "C:/path/to/folder/johnfunnypic"
+        ],
+        "TimeToQueue": "4s",
+        "PostInterval": "20m",
+        "PostDelayAtStartup": "full",
+        "Platforms": {
+            "facebook": "facebook***placeholder***data",
+            "tumblr": "twitter***placeholder***data"
+        },
+        "ItemsInQueue": 0,
+        "NextPostTime": 1637855092463
+    }
+]

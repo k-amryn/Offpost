@@ -2,11 +2,19 @@
 	import MainWindow from './MainWindow.svelte';
 	import { ginstances } from './stores'
 
-  var serversocket = new WebSocket("ws://localhost:8081/config");
+  // this block is used for frontend testing with 'npm run dev', no backend
+  fetch("test_offpost.json")
+    .then(response => response.json())
+    .then(data => {
+      $ginstances = toGInst(data)
+    })
 
-  serversocket.onmessage = function(e) {
-    $ginstances = toGInst(JSON.parse(e.data))
-  };
+
+  // var serversocket = new WebSocket("ws://localhost:8081/config");
+
+  // serversocket.onmessage = function(e) {
+  //   $ginstances = toGInst(JSON.parse(e.data))
+  // };
   
   // returns Go time '10h' as ['10', 'hours']
   function separateTimeUnit(original: string): {num: number, unit: string} {
@@ -76,6 +84,21 @@
     return data
   }
 
+  
+  var alertText: string
+  var alertDisplayed: boolean
+  function showAlert(event) {
+    alertText = event.detail.text
+
+    if (!alertDisplayed) {
+      alertDisplayed = true
+      setTimeout(() => {
+        alertDisplayed = false
+      }, 3000);
+    }
+  }
+
+
 </script>
 
 <style>
@@ -85,11 +108,50 @@
 		display: grid;
 		place-items: center;
 	}
+  #brand-heading {
+    display: grid;
+    width: 90%;
+    height: 200px;
+    grid-template-columns: auto auto;
+    place-content: center;
+    align-content: center;
+  }
+
+  #logo {
+    width: 200px;
+  }
+
+  #alert {
+    width: 0px;
+    height: 130px;
+    white-space: nowrap;
+    overflow: hidden;
+    border-radius: 10px;
+    border: var(--main-border-size);
+    margin: 30px 0px 30px 0px;
+    opacity: 0;
+
+    transition: width 0.3s, opacity 0.3s;
+  }
+
+  #alert.alertDisplayed {
+    width: 400px;
+    opacity: 1;
+    transition: width 0.3s, opacity 0.3s;
+  }
+
+  #alert span {
+    display: block;
+    margin: 10px 10px 10px 10px;
+  }
 </style>
 
 <div id="the-container">
 	<div id="brand-heading">
-		<img src="./logo.svg" alt="Offpost logo" width="200px">
+		<img id="logo" src="./logo.svg" alt="Offpost logo">
+    <div class:alertDisplayed id="alert">
+       <span> {alertText} </span>
+    </div>
 	</div>
-	<MainWindow />
+	<MainWindow on:alert={showAlert}/>
 </div>

@@ -1,8 +1,21 @@
 <script lang="typescript">
-  import { ginstances, activeInstance } from './stores'
+  import { ginstances, activeInstance, unsavedChanges } from './stores'
+
+  // alert about unsaved changes when user tries to switch instance
+  import { createEventDispatcher } from 'svelte'
+  const dispatch = createEventDispatcher()
+  function dispatchAlert(msg) {
+    dispatch('alert', {
+      text: msg
+    })
+  }
 
   function setActive(instanceIndex: number) {
-    $activeInstance = instanceIndex;
+    if ($unsavedChanges) {
+      dispatchAlert("Save changes before switching instances.")
+    } else {
+      $activeInstance = instanceIndex;
+    }
   }
 
   function newInstance() {

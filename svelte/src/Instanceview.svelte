@@ -1,19 +1,34 @@
 <script lang="typescript">
-  import { ginstances, activeInstance } from './stores'
+  import { ginstances, activeInstance, unsavedChanges } from './stores'
+
+  // alert about unsaved changes when user clicks "Configure"
+  import { createEventDispatcher } from 'svelte'
+  const dispatch = createEventDispatcher()
+  function dispatchAlert(msg: string) {
+    dispatch('alert', {
+      text: msg
+    })
+  }
+
+  // copies config, restores copy when user Cancels changes
+  let allInstancesOld = JSON.parse(JSON.stringify($ginstances))
 
   let advanced: boolean = false
   $: instance = $ginstances[$activeInstance]
 
   function addFolder() {
+    $unsavedChanges = true
     instance.ImgFolders = [...instance.ImgFolders, ""]
   }
 
   function removeFolder(i: number) {
+    $unsavedChanges = true
     instance.ImgFolders.splice(i, 1)
     instance.ImgFolders = instance.ImgFolders
   }
 
   function addVariable(variable: string) {
+    $unsavedChanges = true
     let captionInput: HTMLInputElement = document.querySelector('.caption-input')!
     switch (variable) {
       case 'filename':
@@ -28,9 +43,42 @@
     }
   }
 
+  function configurePlatform() {
+    if ($unsavedChanges) {
+      dispatchAlert("Save changes before configuring a platform.")
+    } else {
+
+    }
+  }
+
+  function changeCounter(target: string, upOrDown: string) {
+    $unsavedChanges = true
+
+    if (instance[target].num > 0 && upOrDown === "down") {
+      instance[target].num -= 1
+    } else if (upOrDown === "up") {
+      instance[target].num += 1
+    }
+  }
+
   // used to ensure number inputs are only numbers
-  function filterNonDigits(e: any) {
+  function filterNonDigits(e: any, target: string) {
     e.target.value = e.target.value.replace(/\D/, '')
+    if (e.target.value === "") {
+      instance[target].num = 0
+    } else {
+      instance[target].num = parseInt(e.target.value, 10)
+    }
+  }
+
+  function saveInstanceSettings() {
+    $unsavedChanges = false
+    allInstancesOld = JSON.parse(JSON.stringify($ginstances))
+  }
+
+  function cancelInstanceSettings() {
+    $unsavedChanges = false
+    $ginstances = JSON.parse(JSON.stringify(allInstancesOld))
   }
 </script>
 
@@ -249,7 +297,7 @@
       <div class="setting-content">
         {#each instance.ImgFolders as folder, i}
         <div class="folder-row">
-            <input class="folder-input" bind:value={folder}>
+            <input class="folder-input" bind:value={folder} on:input={() => $unsavedChanges = true}>
             <div class="svg-holder">
               <svg width="18px" style="margin-bottom: 12px;" viewBox="0 0 25 21" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5">
                 <path d="M2412 271v31h47v-26h-25l-4-5h-18z" fill="none" stroke="#000" stroke-width="5.8" transform="matrix(.45762 0 0 .56483 -1102 -151)"/>
@@ -275,12 +323,12 @@
       <div class="setting-content">
         {#each Object.keys(instance.Platforms) as platform}
           <div class="platform-row">
-            <select>
-              <option>Twitter</option>
-              <option>Facebook</option>
-              <option>Tumblr</option>
+            <select value={platform} on:change={() => $unsavedChanges = true}>
+              <option value="twitter">Twitter</option>
+              <option value="facebook">Facebook</option>
+              <option value="tumblr">Tumblr</option>
             </select>
-            <button>Configure</button>
+            <button on:click={() => configurePlatform()}>Configure</button>
             <div class="svg-holder status-indicator">
               <svg width="12px" style="margin-bottom: 8px" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
                 <g transform="matrix(1,0,0,1,-1223.59,-1560.19)">
@@ -317,7 +365,7 @@
     <div class="setting-section">
       <div class="setting-label">Caption:</div>
       <div class="setting-content">
-        <textarea class="caption-input" rows="2"></textarea>
+        <textarea class="caption-input" rows="2" on:input={() => $unsavedChanges = true}></textarea>
         <span class="caption-subtext">Add variable:
           <span on:click={() => addVariable('filename')}>Filename</span>, 
           <span on:click={() => addVariable('comment')}>Comment</span>,
@@ -330,15 +378,15 @@
       <div class="setting-label">Post Delay:</div>
       <div class="setting-content post-delay">
         <div class="counter">
-          <div on:click={() => {if (instance.PostInterval.num > 0) instance.PostInterval.num-=1} } class="minus">
+          <div on:click={() => changeCounter("PostInterval", "down")} class="minus">
             <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
               <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
                 <path d="m185.09 182.56h-10.341"/>
               </g>
             </svg>
           </div>
-          <input on:input={e => filterNonDigits(e) } bind:value={ instance.PostInterval.num }>
-          <div on:click={() => instance.PostInterval.num+=1 } class="plus">
+          <input on:input={e => {filterNonDigits(e, "PostInterval"); $unsavedChanges = true} } value={ instance.PostInterval.num }>
+          <div on:click={() => changeCounter("PostInterval", "up") } class="plus">
             <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
               <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
                 <path d="m179.92 177.39v10.341"/>
@@ -347,7 +395,7 @@
             </svg>
           </div>
         </div>
-        <select bind:value={ instance.PostInterval.unit }>
+        <select on:change={() => $unsavedChanges = true} bind:value={ instance.PostInterval.unit }>
           <option>minutes</option>
           <option>hours</option>
           <option>days</option>
@@ -373,15 +421,15 @@
         <div class="setting-label">Queue Delay:</div>
         <div class="setting-content queue-delay">
           <div class="counter">
-            <div on:click={() => {if (instance.TimeToQueue.num > 0) instance.TimeToQueue.num-=1} } class="minus">
+            <div on:click={() => changeCounter("TimeToQueue", "down")} class="minus">
               <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
                 <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
                   <path d="m185.09 182.56h-10.341"/>
                 </g>
               </svg>
             </div>
-            <input on:input={e => filterNonDigits(e) } style="border-radius: 0px;" bind:value={instance.TimeToQueue.num}>
-            <div on:click={() => instance.TimeToQueue.num+=1 } class="plus">
+            <input on:input={e => {filterNonDigits(e, "TimeToQueue"); $unsavedChanges = true} } style="border-radius: 0px;" value={ instance.TimeToQueue.num }>
+            <div on:click={() => changeCounter("TimeToQueue", "up")} class="plus">
               <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
                 <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
                   <path d="m179.92 177.39v10.341"/>
@@ -390,7 +438,7 @@
               </svg>
             </div>
           </div>
-          <select>
+          <select on:change={() => $unsavedChanges = true} bind:value={ instance.TimeToQueue.unit }>
             <option>seconds</option>
             <option>minutes</option>
           </select>
@@ -400,7 +448,7 @@
       <div class="setting-section">
         <div class="setting-label">Startup Delay:</div>
         <div class="setting-content">
-          <select bind:value={ instance.PostDelayAtStartup }>
+          <select on:change={() => $unsavedChanges = true} bind:value={ instance.PostDelayAtStartup }>
             <!-- On startup, attempt posting at the NextPostTime. If the NextPostTime has passed, 
             then use this option. -->
             <option value="random">Random</option>
@@ -416,7 +464,9 @@
     {/if}
   </div>
   <div id="status-bar">
-    {#if instance.Status === "needs-configuring"}
+    {#if $unsavedChanges}
+      <span class="needs-configuring">Configuring...</span>
+    {:else if instance.Status === "needs-configuring"}
       <span class="needs-configuring">Needs configuring</span>
     {:else if instance.ItemsInQueue > 0}
       <span class="queued">{instance.ItemsInQueue} items in queue<br>
@@ -425,7 +475,12 @@
       <span class="waiting">Waiting for new image</span>
     {/if}
     <div id="status-buttons">
+      {#if !$unsavedChanges}
       <button>Pause</button>
+      {:else}
+      <button on:click={saveInstanceSettings}>Save</button>
+      <button on:click={cancelInstanceSettings}>Cancel</button>
+      {/if}
     </div>
   </div>
 

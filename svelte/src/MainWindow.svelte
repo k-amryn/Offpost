@@ -3,6 +3,15 @@
   import Homeview from './Homeview.svelte'
   import Instanceview from './Instanceview.svelte'
   import { activeInstance } from './stores'
+
+  // relay alert messages from sub-components to App component
+  import { createEventDispatcher } from 'svelte'
+  const dispatch = createEventDispatcher()
+  function dispatchAlert(msg) {
+    dispatch('alert', {
+      text: msg
+    })
+  }
 </script>
 
 <style>
@@ -22,13 +31,13 @@
 </style>
 
 <div id="window-inner">
-  <Sidebar />
+  <Sidebar on:alert={(e) => dispatchAlert(e.detail.text)} />
 
   <div id="mainview">
     {#if $activeInstance === -1}
       <Homeview />
     {:else}
-      <Instanceview />
+      <Instanceview on:alert={(e) => dispatchAlert(e.detail.text)}/>
     {/if}
   </div>
 
