@@ -3,18 +3,18 @@
 	import { ginstances } from './stores'
 
   // this block is used for frontend testing with 'npm run dev', no backend
-  fetch("test_offpost.json")
-    .then(response => response.json())
-    .then(data => {
-      $ginstances = toGInst(data)
-    })
+  // fetch("test_offpost.json")
+  //   .then(response => response.json())
+  //   .then(data => {
+  //     $ginstances = toGInst(data)
+  //   })
 
 
-  // var serversocket = new WebSocket("ws://localhost:8081/config");
+  var serversocket = new WebSocket("ws://localhost:8081/config");
 
-  // serversocket.onmessage = function(e) {
-  //   $ginstances = toGInst(JSON.parse(e.data))
-  // };
+  serversocket.onmessage = function(e) {
+    $ginstances = toGInst(JSON.parse(e.data))
+  };
   
   // returns Go time '10h' as ['10', 'hours']
   function separateTimeUnit(original: string): {num: number, unit: string} {
