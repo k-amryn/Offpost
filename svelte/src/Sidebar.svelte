@@ -22,13 +22,14 @@
     $ginstances = [...$ginstances, {
       Name: "testing" + Math.random().toString(),
       ImgFolders: [],
-      TimeToQueue: {num: 30, unit: "seconds"},
-      PostInterval: {num: 5, unit: "hours"},
-      PostDelayAtStartup: "random",
+      QueueDelay: {num: 30, unit: "seconds"},
+      PostDelay: {num: 5, unit: "hours"},
+      StartupPostDelay: "random",
       Platforms: {
           facebook: "haha",
           twitter: "haha"
       },
+      Caption: "",
       ItemsInQueue: 0,
       NextPostTime: "",
       Status: "needs-configuring"

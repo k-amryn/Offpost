@@ -365,7 +365,7 @@
     <div class="setting-section">
       <div class="setting-label">Caption:</div>
       <div class="setting-content">
-        <textarea class="caption-input" rows="2" on:input={() => $unsavedChanges = true}></textarea>
+        <textarea class="caption-input" rows="2" on:input={() => $unsavedChanges = true} bind:value={instance.Caption}></textarea>
         <span class="caption-subtext">Add variable:
           <span on:click={() => addVariable('filename')}>Filename</span>, 
           <span on:click={() => addVariable('comment')}>Comment</span>,
@@ -378,14 +378,14 @@
       <div class="setting-label">Post Delay:</div>
       <div class="setting-content post-delay">
         <div class="counter">
-          <div on:click={() => changeCounter("PostInterval", "down")} class="minus">
+          <div on:click={() => changeCounter("PostDelay", "down")} class="minus">
             <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
               <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
                 <path d="m185.09 182.56h-10.341"/>
               </g>
             </svg>
           </div>
-          <input on:input={e => {filterNonDigits(e, "PostInterval"); $unsavedChanges = true} } value={ instance.PostInterval.num }>
+          <input on:input={e => {filterNonDigits(e, "PostDelay"); $unsavedChanges = true} } value={ instance.PostDelay.num }>
           <div on:click={() => changeCounter("PostInterval", "up") } class="plus">
             <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
               <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
@@ -395,7 +395,7 @@
             </svg>
           </div>
         </div>
-        <select on:change={() => $unsavedChanges = true} bind:value={ instance.PostInterval.unit }>
+        <select on:change={() => $unsavedChanges = true} bind:value={ instance.PostDelay.unit }>
           <option>minutes</option>
           <option>hours</option>
           <option>days</option>
@@ -421,15 +421,15 @@
         <div class="setting-label">Queue Delay:</div>
         <div class="setting-content queue-delay">
           <div class="counter">
-            <div on:click={() => changeCounter("TimeToQueue", "down")} class="minus">
+            <div on:click={() => changeCounter("QueueDelay", "down")} class="minus">
               <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
                 <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
                   <path d="m185.09 182.56h-10.341"/>
                 </g>
               </svg>
             </div>
-            <input on:input={e => {filterNonDigits(e, "TimeToQueue"); $unsavedChanges = true} } style="border-radius: 0px;" value={ instance.TimeToQueue.num }>
-            <div on:click={() => changeCounter("TimeToQueue", "up")} class="plus">
+            <input on:input={e => {filterNonDigits(e, "QueueDelay"); $unsavedChanges = true} } style="border-radius: 0px;" value={ instance.QueueDelay.num }>
+            <div on:click={() => changeCounter("QueueDelay", "up")} class="plus">
               <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
                 <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
                   <path d="m179.92 177.39v10.341"/>
@@ -438,7 +438,7 @@
               </svg>
             </div>
           </div>
-          <select on:change={() => $unsavedChanges = true} bind:value={ instance.TimeToQueue.unit }>
+          <select on:change={() => $unsavedChanges = true} bind:value={ instance.QueueDelay.unit }>
             <option>seconds</option>
             <option>minutes</option>
           </select>
@@ -448,7 +448,7 @@
       <div class="setting-section">
         <div class="setting-label">Startup Delay:</div>
         <div class="setting-content">
-          <select on:change={() => $unsavedChanges = true} bind:value={ instance.PostDelayAtStartup }>
+          <select on:change={() => $unsavedChanges = true} bind:value={ instance.StartupPostDelay }>
             <!-- On startup, attempt posting at the NextPostTime. If the NextPostTime has passed, 
             then use this option. -->
             <option value="random">Random</option>

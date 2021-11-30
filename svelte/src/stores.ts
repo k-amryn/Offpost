@@ -4,10 +4,11 @@ import { writable, Writable } from 'svelte/store';
 type ginstance = {
   Name: string;
   ImgFolders: string[];
-  TimeToQueue: {num: number, unit: string};
-  PostInterval: {num: number, unit: string};
-  PostDelayAtStartup: string;
+  QueueDelay: {num: number, unit: string};
+  PostDelay: {num: number, unit: string};
+  StartupPostDelay: string;
   Platforms: {facebook:string, twitter: string}; 
+  Caption: string;
   ItemsInQueue: number;
   NextPostTime: string;
   Status?: string;

@@ -73,10 +73,11 @@
     data.forEach(e => {
       e.Name = e.Name
       e.ImgFolders = e.ImgFolders
-      e.TimeToQueue = separateTimeUnit(e.TimeToQueue)
-      e.PostInterval = separateTimeUnit(e.PostInterval)
-      e.PostDelayAtStartup = e.PostDelayAtStartup
+      e.QueueDelay = separateTimeUnit(e.QueueDelay)
+      e.PostDelay = separateTimeUnit(e.PostDelay)
+      e.StartupPostDelay = e.StartupPostDelay
       e.Platforms = e.Platforms
+      e.Caption = e.Caption
       e.ItemsInQueue = e.ItemsInQueue
       e.NextPostTime = dateFromUnixTime(e.NextPostTime)
       e.Status = e.Status

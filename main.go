@@ -22,14 +22,15 @@ import (
 )
 
 type instance struct {
-	Name               string            `json:"Name"`
-	ImgFolders         []string          `json:"ImgFolders"`
-	TimeToQueue        string            `json:"TimeToQueue"`
-	PostInterval       string            `json:"PostInterval"`
-	PostDelayAtStartup string            `json:"PostDelayAtStartup"`
-	Platforms          map[string]string `json:"Platforms"`
-	ItemsInQueue       int               `json:"ItemsInQueue"`
-	NextPostTime       int64             `json:"NextPostTime"`
+	Name             string            `json:"Name"`
+	ImgFolders       []string          `json:"ImgFolders"`
+	QueueDelay       string            `json:"QueueDelay"`
+	PostDelay        string            `json:"PostDelay"`
+	StartupPostDelay string            `json:"StartupPostDelay"`
+	Platforms        map[string]string `json:"Platforms"`
+	Caption          string            `json:"Caption"`
+	ItemsInQueue     int               `json:"ItemsInQueue"`
+	NextPostTime     int64             `json:"NextPostTime"`
 }
 
 type allInstances struct {
@@ -47,24 +48,26 @@ func loadInstances() []*instance {
 		log.Panic("offpost.json not found.")
 	}
 	instancesRaw := make([]struct {
-		Name               string
-		ImgFolders         []string
-		TimeToQueue        string
-		PostInterval       string
-		PostDelayAtStartup string
-		Platforms          map[string]string
+		Name             string
+		ImgFolders       []string
+		QueueDelay       string
+		PostDelay        string
+		StartupPostDelay string
+		Platforms        map[string]string
+		Caption          string
 	}, 0)
 	_ = json.Unmarshal(jsonBlob, &instancesRaw)
 
 	realInstances := make([]*instance, 0)
 	for instanceIndex := range instancesRaw {
 		realInstances = append(realInstances, &instance{
-			Name:               instancesRaw[instanceIndex].Name,
-			ImgFolders:         instancesRaw[instanceIndex].ImgFolders,
-			TimeToQueue:        instancesRaw[instanceIndex].TimeToQueue,
-			PostInterval:       instancesRaw[instanceIndex].PostInterval,
-			PostDelayAtStartup: instancesRaw[instanceIndex].PostDelayAtStartup,
-			Platforms:          instancesRaw[instanceIndex].Platforms},
+			Name:             instancesRaw[instanceIndex].Name,
+			ImgFolders:       instancesRaw[instanceIndex].ImgFolders,
+			QueueDelay:       instancesRaw[instanceIndex].QueueDelay,
+			PostDelay:        instancesRaw[instanceIndex].PostDelay,
+			StartupPostDelay: instancesRaw[instanceIndex].StartupPostDelay,
+			Platforms:        instancesRaw[instanceIndex].Platforms,
+			Caption:          instancesRaw[instanceIndex].Caption},
 		)
 	}
 
@@ -117,14 +120,14 @@ func (instances *allInstances) initQueue() {
 	}
 }
 
-// instance.TimeToQueue and instance.PostInterval are stored as strings,
-// func timetoQueue() and func postInterval() convert string to time duration
-func (instance *instance) timeToQueue() time.Duration {
-	return processTime(instance.TimeToQueue)
+// instance.QueueDelay and instance.PostDelay are stored as strings,
+// func queueDelay() and func postDelay() convert string to time duration
+func (instance *instance) queueDelay() time.Duration {
+	return processTime(instance.QueueDelay)
 }
 
-func (instance *instance) postInterval() time.Duration {
-	return processTime(instance.PostInterval)
+func (instance *instance) postDelay() time.Duration {
+	return processTime(instance.PostDelay)
 }
 
 func processTime(stringTime string) time.Duration {
@@ -288,7 +291,8 @@ func (instance *instance) appendTxtFile(shortQueue [][]string, queueOrPost strin
 	}
 }
 
-// monitors folders, manages queueing and posting
+// monitors folders, manages queueing and posting, *allInstances is being sent
+// here to access its Mutex to prevent data races
 func (instance *instance) monitorFolder(readySend chan string, all *allInstances) {
 
 	watcher, err := fsnotify.NewWatcher()
@@ -303,14 +307,14 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 	go func() {
 		var shortQueue [][]string
 
-		queueTimer := time.NewTimer(instance.timeToQueue())
+		queueTimer := time.NewTimer(instance.queueDelay())
 		queueTimer.Stop()
 
 		var postTimer *time.Timer
 		var postTimerCheck *time.Timer
-		switch instance.PostDelayAtStartup {
+		switch instance.StartupPostDelay {
 		case "random":
-			// my funny seed algorithm, mixes part of instance name and the nanosecond time
+			// my funny seed algorithm, mixes part of instance name with current time
 			fiveLetters := fmt.Sprint([]byte(instance.Name[:5]))
 			fiveLetters = strings.ReplaceAll(fiveLetters, " ", "")
 			fiveLetters = strings.ReplaceAll(fiveLetters, "[", "")
@@ -319,16 +323,16 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 			rand.Seed(time.Now().UnixNano() + int64(fiveLetters64))
 			//-----seed algorithm finished-----
 
-			randSecondsStr := fmt.Sprint(rand.Intn(int(instance.postInterval().Seconds())))
+			randSecondsStr := fmt.Sprint(rand.Intn(int(instance.postDelay().Seconds())))
 			randSecondsDur, _ := time.ParseDuration(randSecondsStr + "s")
 			postTimer = time.NewTimer(randSecondsDur)
 			// postTimerCheck allows timer.Stop check without stopping main timer
 			postTimerCheck = time.NewTimer(randSecondsDur)
 			instance.NextPostTime = time.Now().Add(randSecondsDur).UnixMilli()
 		case "full":
-			postTimer = time.NewTimer(instance.postInterval())
-			postTimerCheck = time.NewTimer(instance.postInterval())
-			instance.NextPostTime = time.Now().Add(instance.postInterval()).UnixMilli()
+			postTimer = time.NewTimer(instance.postDelay())
+			postTimerCheck = time.NewTimer(instance.postDelay())
+			instance.NextPostTime = time.Now().Add(instance.postDelay()).UnixMilli()
 		default:
 			postTimer = time.NewTimer(0 * time.Second)
 			postTimerCheck = time.NewTimer(0 * time.Second)
@@ -361,7 +365,7 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 
 					queueTimer.Stop()
 					// fmt.Printf("%v timer stopped\n", instance.Name)
-					queueTimer.Reset(instance.timeToQueue())
+					queueTimer.Reset(instance.queueDelay())
 					// fmt.Printf("%v timer reset\n", instance.Name)
 
 					fmt.Printf("%v New image found\n", instance.Name)
@@ -395,7 +399,7 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 					if len(shortQueue) != 0 {
 						queueTimer.Stop()
 						fmt.Printf("%v timer stopped\n", instance.Name)
-						queueTimer.Reset(instance.timeToQueue())
+						queueTimer.Reset(instance.queueDelay())
 						fmt.Printf("%v timer reset\n", instance.Name)
 					}
 				} // end of event switch
@@ -417,15 +421,15 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 					if isEmpty && !postTimerCheck.Stop() {
 						instance.makePost()
 						postTimer.Stop()
-						postTimer.Reset(instance.postInterval())
+						postTimer.Reset(instance.postDelay())
 						postTimerCheck.Stop()
-						postTimerCheck.Reset(instance.postInterval())
-						instance.NextPostTime = time.Now().Add(instance.postInterval()).UnixMilli()
+						postTimerCheck.Reset(instance.postDelay())
+						instance.NextPostTime = time.Now().Add(instance.postDelay()).UnixMilli()
 					}
 
 					guiSend <- ""
 
-					queueTimer = time.NewTimer(instance.timeToQueue())
+					queueTimer = time.NewTimer(instance.queueDelay())
 					queueTimer.Stop()
 					shortQueue = [][]string{}
 
@@ -436,10 +440,10 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 				if !instance.isQueueEmpty() {
 					instance.makePost()
 					postTimer.Stop()
-					postTimer.Reset(instance.postInterval())
+					postTimer.Reset(instance.postDelay())
 					postTimerCheck.Stop()
-					postTimerCheck.Reset(instance.postInterval())
-					instance.NextPostTime = time.Now().Add(instance.postInterval()).UnixMilli()
+					postTimerCheck.Reset(instance.postDelay())
+					instance.NextPostTime = time.Now().Add(instance.postDelay()).UnixMilli()
 
 					guiSend <- ""
 					all.mu.Unlock()
