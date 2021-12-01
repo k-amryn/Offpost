@@ -386,7 +386,7 @@
             </svg>
           </div>
           <input on:input={e => {filterNonDigits(e, "PostDelay"); $unsavedChanges = true} } value={ instance.PostDelay.num }>
-          <div on:click={() => changeCounter("PostInterval", "up") } class="plus">
+          <div on:click={() => changeCounter("PostDelay", "up") } class="plus">
             <svg width="15px" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
               <g transform="translate(-173.99 -176.63)" fill="none" stroke="#000" stroke-linecap="round" stroke-width="1.5218px">
                 <path d="m179.92 177.39v10.341"/>

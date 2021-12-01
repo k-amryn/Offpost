@@ -12,6 +12,7 @@ type ginstance = {
   ItemsInQueue: number;
   NextPostTime: string;
   Status?: string;
+  Image: string;
 }
 
 // export const instances: Writable<instance[]> = writable([])

@@ -109,7 +109,7 @@
 			<div class="instance" on:click="{() => setActive(i)}">
 
 				<div class="instance-img">
-					<img src="./testinguserdata/{instance.Name}.webp" alt="{instance.Name} image">
+					<img src="{instance.Image}" alt="{instance.Name}">
 				</div>
 
 				<div class="instance-text">

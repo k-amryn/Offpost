@@ -81,6 +81,7 @@
       e.ItemsInQueue = e.ItemsInQueue
       e.NextPostTime = dateFromUnixTime(e.NextPostTime)
       e.Status = e.Status
+      e.Image = "./testinguserdata/" + e.Name + ".webp"
     })
     return data
   }

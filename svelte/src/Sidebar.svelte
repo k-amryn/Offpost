@@ -19,21 +19,25 @@
   }
 
   function newInstance() {
-    $ginstances = [...$ginstances, {
-      Name: "testing" + Math.random().toString(),
-      ImgFolders: [],
-      QueueDelay: {num: 30, unit: "seconds"},
-      PostDelay: {num: 5, unit: "hours"},
-      StartupPostDelay: "random",
-      Platforms: {
-          facebook: "haha",
-          twitter: "haha"
-      },
-      Caption: "",
-      ItemsInQueue: 0,
-      NextPostTime: "",
-      Status: "needs-configuring"
-    }]
+    if (!$unsavedChanges) {
+      $ginstances = [...$ginstances, {
+        Name: "testing" + Math.random().toString(),
+        ImgFolders: [""],
+        QueueDelay: {num: 30, unit: "seconds"},
+        PostDelay: {num: 5, unit: "hours"},
+        StartupPostDelay: "random",
+        Platforms: {
+            facebook: "haha",
+            twitter: "haha"
+        },
+        Caption: "",
+        ItemsInQueue: 0,
+        NextPostTime: "",
+        Status: "needs-configuring",
+        Image: "./new_instance.svg"
+      }]
+    }
+    setActive($ginstances.length - 1)
   }
 </script>
 
@@ -158,7 +162,7 @@
         class:active="{ index === $activeInstance }"
         on:click={() => setActive(index)}>
         <div class="sidebar-item-inner">
-          <img src="./testinguserdata/{instance.Name}.webp" alt="{instance.Name} image">
+          <img src="{instance.Image}" alt="{instance.Name} image">
         </div>
       </div>
     { /each }
