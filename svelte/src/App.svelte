@@ -1,6 +1,6 @@
 <script lang="typescript">
 	import MainWindow from './MainWindow.svelte';
-	import { ginstances } from './stores'
+	import { ginstances, ginstancesOld } from './stores'
 
   // this block is used for frontend testing with 'npm run dev', no backend
   // fetch("test_offpost.json")
@@ -14,6 +14,7 @@
 
   serversocket.onmessage = function(e) {
     $ginstances = toGInst(JSON.parse(e.data))
+    $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
   };
   
   // returns Go time '10h' as ['10', 'hours']
