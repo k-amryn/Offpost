@@ -1,5 +1,5 @@
 <script lang="typescript">
-  import { ginstances, activeInstance, unsavedChanges } from './stores'
+  import { ginstances, ginstancesOld, activeInstance, unsavedChanges } from './stores'
 
   // alert about unsaved changes when user clicks "Configure"
   import { createEventDispatcher } from 'svelte'
@@ -10,8 +10,11 @@
     })
   }
 
-  // copies config, restores copy when user Cancels changes
-  let allInstancesOld = JSON.parse(JSON.stringify($ginstances))
+  // Copies config, restores copy when user Cancels changes. Don't copy for
+  // newly created instances, because "canceling" should delete new instance
+  if ($ginstances[$activeInstance].Status != "new-instance") {
+    $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
+  }
 
   let advanced: boolean = false
   $: instance = $ginstances[$activeInstance]
@@ -73,12 +76,15 @@
 
   function saveInstanceSettings() {
     $unsavedChanges = false
-    allInstancesOld = JSON.parse(JSON.stringify($ginstances))
+    $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
   }
 
   function cancelInstanceSettings() {
     $unsavedChanges = false
-    $ginstances = JSON.parse(JSON.stringify(allInstancesOld))
+    if ($ginstances[$activeInstance].Status === "new-instance") {
+      $activeInstance = $ginstances.length - 2
+    } 
+    $ginstances = JSON.parse(JSON.stringify($ginstancesOld))
   }
 </script>
 

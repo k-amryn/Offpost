@@ -33,11 +33,12 @@
         Caption: "",
         ItemsInQueue: 0,
         NextPostTime: "",
-        Status: "needs-configuring",
+        Status: "new-instance",
         Image: "./new_instance.svg"
       }]
     }
     setActive($ginstances.length - 1)
+    $unsavedChanges = true
   }
 </script>
 
