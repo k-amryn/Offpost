@@ -26,10 +26,10 @@ type instance struct {
 	QueueDelay       string            `json:"QueueDelay"`
 	PostDelay        string            `json:"PostDelay"`
 	StartupPostDelay string            `json:"StartupPostDelay"`
+	NextPostTime     int64             `json:"NextPostTime"`
 	Platforms        map[string]string `json:"Platforms"`
 	Caption          string            `json:"Caption"`
 	ItemsInQueue     int               `json:"ItemsInQueue"`
-	NextPostTime     int64             `json:"NextPostTime"`
 }
 
 type allInstances struct {
@@ -46,31 +46,9 @@ func loadInstances() []*instance {
 	if err != nil {
 		log.Panic("offpost.json not found.")
 	}
-	instancesRaw := make([]struct {
-		Name             string
-		ImgFolders       []string
-		QueueDelay       string
-		PostDelay        string
-		StartupPostDelay string
-		Platforms        map[string]string
-		Caption          string
-	}, 0)
+	instancesRaw := make([]*instance, 0)
 	_ = json.Unmarshal(jsonBlob, &instancesRaw)
-
-	realInstances := make([]*instance, 0)
-	for instanceIndex := range instancesRaw {
-		realInstances = append(realInstances, &instance{
-			Name:             instancesRaw[instanceIndex].Name,
-			ImgFolders:       instancesRaw[instanceIndex].ImgFolders,
-			QueueDelay:       instancesRaw[instanceIndex].QueueDelay,
-			PostDelay:        instancesRaw[instanceIndex].PostDelay,
-			StartupPostDelay: instancesRaw[instanceIndex].StartupPostDelay,
-			Platforms:        instancesRaw[instanceIndex].Platforms,
-			Caption:          instancesRaw[instanceIndex].Caption},
-		)
-	}
-
-	return realInstances
+	return instancesRaw
 }
 
 func (instances *allInstances) initQueue() {
@@ -311,31 +289,44 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 
 		var postTimer *time.Timer
 		var postTimerCheck *time.Timer
-		switch instance.StartupPostDelay {
-		case "random":
-			// my funny seed algorithm, mixes part of instance name with current time
-			fiveLetters := fmt.Sprint([]byte(instance.Name[:5]))
-			fiveLetters = strings.ReplaceAll(fiveLetters, " ", "")
-			fiveLetters = strings.ReplaceAll(fiveLetters, "[", "")
-			fiveLetters = strings.ReplaceAll(fiveLetters, "]", "")
-			fiveLetters64, _ := strconv.Atoi(fiveLetters)
-			rand.Seed(time.Now().UnixNano() + int64(fiveLetters64))
-			//-----seed algorithm finished-----
 
-			randSecondsStr := fmt.Sprint(rand.Intn(int(instance.postDelay().Seconds())))
-			randSecondsDur, _ := time.ParseDuration(randSecondsStr + "s")
-			postTimer = time.NewTimer(randSecondsDur)
-			// postTimerCheck allows timer.Stop check without stopping main timer
-			postTimerCheck = time.NewTimer(randSecondsDur)
-			instance.NextPostTime = time.Now().Add(randSecondsDur).UnixMilli()
-		case "full":
-			postTimer = time.NewTimer(instance.postDelay())
-			postTimerCheck = time.NewTimer(instance.postDelay())
-			instance.NextPostTime = time.Now().Add(instance.postDelay()).UnixMilli()
-		default:
-			postTimer = time.NewTimer(0 * time.Second)
-			postTimerCheck = time.NewTimer(0 * time.Second)
-			instance.NextPostTime = time.Now().UnixMilli()
+		// if NextPostTime has passed, then schedule a new NextPostTime
+		// time.Sleep(3 * time.Second)
+		if time.Now().UnixMilli() > instance.NextPostTime {
+			fmt.Println(instance.Name + ": scheduled post time has passed. Scheduling new post time.")
+			switch instance.StartupPostDelay {
+			case "random":
+				// my funny seed algorithm, mixes part of instance name with current time
+				fiveLetters := fmt.Sprint([]byte(instance.Name[:5]))
+				fiveLetters = strings.ReplaceAll(fiveLetters, " ", "")
+				fiveLetters = strings.ReplaceAll(fiveLetters, "[", "")
+				fiveLetters = strings.ReplaceAll(fiveLetters, "]", "")
+				fiveLetters64, _ := strconv.Atoi(fiveLetters)
+				rand.Seed(time.Now().UnixNano() + int64(fiveLetters64))
+				//-----seed algorithm finished-----
+
+				randSecondsStr := fmt.Sprint(rand.Intn(int(instance.postDelay().Seconds())))
+				randSecondsDur, _ := time.ParseDuration(randSecondsStr + "s")
+				postTimer = time.NewTimer(randSecondsDur)
+				// postTimerCheck allows timer.Stop check without stopping main timer
+				postTimerCheck = time.NewTimer(randSecondsDur)
+				instance.NextPostTime = time.Now().Add(randSecondsDur).UnixMilli()
+			case "full":
+				postTimer = time.NewTimer(instance.postDelay())
+				postTimerCheck = time.NewTimer(instance.postDelay())
+				instance.NextPostTime = time.Now().Add(instance.postDelay()).UnixMilli()
+			case "none": // StartupPostDelay = "none"
+				postTimer = time.NewTimer(0 * time.Second)
+				postTimerCheck = time.NewTimer(0 * time.Second)
+				instance.NextPostTime = time.Now().UnixMilli()
+			default:
+				log.Panic("StartupPostDelay value must be \"random\", \"full\", or \"none\". Check your offpost.json")
+			}
+		} else { // use the saved NextPostTime
+			fmt.Println(instance.Name + ": using scheduled post time.")
+			timeUntilNextPost := time.Until(time.UnixMilli(instance.NextPostTime))
+			postTimer = time.NewTimer(timeUntilNextPost)
+			postTimerCheck = time.NewTimer(timeUntilNextPost)
 		}
 
 		readySend <- instance.Name
@@ -424,6 +415,7 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 						postTimerCheck.Stop()
 						postTimerCheck.Reset(instance.postDelay())
 						instance.NextPostTime = time.Now().Add(instance.postDelay()).UnixMilli()
+						all.saveSettings(all.c)
 					}
 
 					guiSend <- ""
@@ -443,6 +435,7 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 					postTimerCheck.Stop()
 					postTimerCheck.Reset(instance.postDelay())
 					instance.NextPostTime = time.Now().Add(instance.postDelay()).UnixMilli()
+					all.saveSettings(all.c)
 
 					guiSend <- ""
 					all.mu.Unlock()
@@ -526,6 +519,8 @@ offpost.json settings loaded.
 		go instances.c[i].monitorFolder(readySend, &instances)
 		<-readySend
 	}
+	// saving at this point to save rescheduled post times
+	instances.saveSettings(instances.c)
 
 	// -----------------------------------------
 	// this websocket serves instance config whenever something is posted or queued

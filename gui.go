@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
@@ -115,7 +116,7 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 			fmt.Println(string(p)[3:])
 			var data []*instance
 			json.Unmarshal(p[3:], &data)
-			instances.saveGuiSettings(data)
+			instances.saveSettings(data)
 		default:
 			fmt.Println("Invalid socket message received.")
 		}
@@ -131,10 +132,39 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 	}
 }
 
-func (instances *allInstances) saveGuiSettings(newInstances []*instance) {
+func (instances *allInstances) saveSettings(newInstances []*instance) {
 	for i := range instances.c {
 		instances.c[i].Caption = newInstances[i].Caption
 	}
+
+	// defining this type separately from main "instance" type allows us to avoid
+	// saving certain fields to the json file, e.g. "ItemsInQueue" doesn't need
+	// to be saved because it's generated on startup
+	typeToSave := make([]struct {
+		Name             string            `json:"Name"`
+		ImgFolders       []string          `json:"ImgFolders"`
+		QueueDelay       string            `json:"QueueDelay"`
+		PostDelay        string            `json:"PostDelay"`
+		StartupPostDelay string            `json:"StartupPostDelay"`
+		NextPostTime     int64             `json:"NextPostTime"`
+		Platforms        map[string]string `json:"Platforms"`
+		Caption          string            `json:"Caption"`
+	}, len(newInstances))
+	for i := range newInstances {
+		typeToSave[i].Name = newInstances[i].Name
+		typeToSave[i].ImgFolders = newInstances[i].ImgFolders
+		typeToSave[i].QueueDelay = newInstances[i].QueueDelay
+		typeToSave[i].PostDelay = newInstances[i].PostDelay
+		typeToSave[i].StartupPostDelay = newInstances[i].StartupPostDelay
+		typeToSave[i].NextPostTime = newInstances[i].NextPostTime
+		typeToSave[i].Platforms = newInstances[i].Platforms
+		typeToSave[i].Caption = newInstances[i].Caption
+	}
+	dataToSave, err := json.MarshalIndent(typeToSave, "", "\t")
+	if err != nil {
+		log.Panic(err)
+	}
+	os.WriteFile("./userdata/offpost.json", dataToSave, 0666)
 }
 
 // ------------------------ end svelte gui functions ---------------------------
