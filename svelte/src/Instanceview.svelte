@@ -10,6 +10,12 @@
     })
   }
 
+  function dispatchSocketMessage(msg: string) {
+    dispatch('socketMessage', {
+      text: msg
+    })
+  }
+
   // Copies config, restores copy when user Cancels changes. Don't copy for
   // newly created instances, because "canceling" should delete new instance
   if ($ginstances[$activeInstance].Status != "new-instance") {
@@ -77,6 +83,7 @@
   function saveInstanceSettings() {
     $unsavedChanges = false
     $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
+    dispatchSocketMessage("s, " + JSON.stringify($ginstances))
   }
 
   function cancelInstanceSettings() {

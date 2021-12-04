@@ -18,7 +18,6 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/getlantern/systray"
-	"github.com/gorilla/websocket"
 )
 
 type instance struct {
@@ -543,53 +542,4 @@ offpost.json settings loaded.
 	// <-stayOpen makes the program stay open since no value is sent to the channel
 	stayOpen := make(chan int)
 	<-stayOpen
-}
-
-func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Request) {
-	var upgrader = websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-	}
-	conn, _ := upgrader.Upgrade(w, r, nil)
-	clientClosed := make(chan bool)
-
-	instances.mu.Lock()
-	guiOpen = true
-	instances.mu.Unlock()
-	fmt.Print("GUI opening\n\n")
-
-	wsSend <- ""
-
-	// sends to the GUI, when wsSend is fed a string
-	go func() {
-		for {
-			select {
-			case <-wsSend:
-				err := conn.WriteJSON(instances.c)
-				if err != nil {
-					fmt.Println(err)
-				}
-			case <-clientClosed:
-				// exit writer function when ReadMessage says client is closed
-				return
-			}
-
-		}
-	}()
-
-	// reads from the GUI
-	for {
-		_, p, err := conn.ReadMessage()
-		if err != nil {
-			instances.mu.Lock()
-			// ReadMessage returns err when client closes
-			clientClosed <- true
-			fmt.Print("GUI closing\n\n")
-			guiOpen = false
-			instances.mu.Unlock()
-			return
-		}
-
-		fmt.Println("Received:", string(p))
-	}
 }

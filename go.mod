@@ -13,5 +13,5 @@ require (
 	github.com/getlantern/systray v1.1.0
 	github.com/gorilla/websocket v1.4.2
 	golang.org/x/net v0.0.0-20210316092652-d523dce5a7f4 // indirect
-	golang.org/x/sys v0.0.0-20210317091845-390168757d9c // indirect
+	golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6 // indirect
 )

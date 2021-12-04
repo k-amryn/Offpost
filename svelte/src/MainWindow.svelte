@@ -12,6 +12,12 @@
       text: msg
     })
   }
+
+  function dispatchSocketMessage(msg: string) {
+    dispatch('socketMessage', {
+      text: msg
+    })
+  }
 </script>
 
 <style>
@@ -37,7 +43,10 @@
     {#if $activeInstance === -1}
       <Homeview />
     {:else}
-      <Instanceview on:alert={(e) => dispatchAlert(e.detail.text)}/>
+      <Instanceview 
+        on:alert={e => dispatchAlert(e.detail.text)}
+        on:socketMessage={e => dispatchSocketMessage(e.detail.text)}
+      />
     {/if}
   </div>
 

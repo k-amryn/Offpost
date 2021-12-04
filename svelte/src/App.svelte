@@ -1,5 +1,5 @@
 <script lang="typescript">
-	import MainWindow from './MainWindow.svelte';
+	import MainWindow from './MainWindow.svelte'
 	import { ginstances, ginstancesOld } from './stores'
 
   // this block is used for frontend testing with 'npm run dev', no backend
@@ -11,11 +11,29 @@
 
 
   var serversocket = new WebSocket("ws://localhost:8081/config");
-
+  
   serversocket.onmessage = function(e) {
     $ginstances = toGInst(JSON.parse(e.data))
     $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
   };
+
+  // each message sent over the server socket has an identifier at the beginning
+  // of the string in the form of "[letter], "
+  // Those identifiers:
+  // "s, " --> save settings, the message contains the json instance config
+  function sendSocket(msg: string) {
+    switch (msg.slice(0,3)) {
+      case "s, ":
+        let dataBlob: string = msg.slice(3)
+        let converted: string = JSON.stringify(fromGInst(JSON.parse(dataBlob)))
+        // add the "s, " back so Go can identify the message
+        serversocket.send("s, " + converted)
+        break;
+    
+      default:
+        break;
+    }
+  }
   
   // returns Go time '10h' as ['10', 'hours']
   function separateTimeUnit(original: string): {num: number, unit: string} {
@@ -83,6 +101,23 @@
       e.NextPostTime = dateFromUnixTime(e.NextPostTime)
       e.Status = e.Status
       e.Image = "./testinguserdata/" + e.Name + ".webp"
+    })
+    return data
+  }
+
+  function fromGInst(data: any[]): any[] {
+    data.forEach(e => {
+      e.Name = e.Name
+      e.ImgFolders = e.ImgFolders
+      e.QueueDelay = e.QueueDelay["num"] + e.QueueDelay["unit"].slice(0,1)
+      e.PostDelay = e.PostDelay["num"] + e.PostDelay["unit"].slice(0,1)
+      e.StartupPostDelay = e.StartupPostDelay
+      e.Platforms = e.Platforms
+      e.Caption = e.Caption
+      delete e.ItemsInQueue
+      delete e.Image
+      delete e.Status
+      delete e.NextPostTime
     })
     return data
   }
@@ -156,5 +191,8 @@
        <span> {alertText} </span>
     </div>
 	</div>
-	<MainWindow on:alert={showAlert}/>
+	<MainWindow 
+    on:alert={showAlert}
+    on:socketMessage={m => sendSocket(m.detail.text)}
+  />
 </div>
