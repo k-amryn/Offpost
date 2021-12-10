@@ -112,29 +112,35 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 		// characters in the string
 		switch string(p)[:3] {
 		case "s, ":
-			fmt.Println("we received a message to save the settings")
-			fmt.Println(string(p)[3:])
 			var data []*instance
 			json.Unmarshal(p[3:], &data)
-			instances.saveSettings(data)
+			instances.saveSettings(true, data)
 		default:
 			fmt.Println("Invalid socket message received.")
 		}
-
-		// for i := range data {
-		// 	// fmt.Println(instances.c[i].Caption)
-		// 	fmt.Println(data[i].Caption)
-		// 	instances.c[i].Caption = data[i].Caption
-		// }
 
 		fmt.Println("---")
 		// fmt.Println("Received:", string(p))
 	}
 }
 
-func (instances *allInstances) saveSettings(newInstances []*instance) {
-	for i := range instances.c {
-		instances.c[i].Caption = newInstances[i].Caption
+func (instances *allInstances) saveSettings(fromGui bool, new []*instance) {
+	if fromGui {
+		instances.mu.Lock()
+		for i := range instances.c {
+			nextPost := instances.c[i].NextPostTime
+			instances.c[i] = new[i]
+			instances.c[i].NextPostTime = nextPost
+			// instances.c[i].Caption = new[i].Caption
+			// if instances.c[i].PostDelay != new[i].PostDelay {
+			// 	instances.c[i].PostDelay = new[i].PostDelay
+
+			// 	instances.c[i].restartMonitoring <- 0
+			go instances.c[i].monitorFolder(true, instances)
+			<-instances.readySend
+			// }
+		}
+		instances.mu.Unlock()
 	}
 
 	// defining this type separately from main "instance" type allows us to avoid
@@ -149,16 +155,16 @@ func (instances *allInstances) saveSettings(newInstances []*instance) {
 		NextPostTime     int64             `json:"NextPostTime"`
 		Platforms        map[string]string `json:"Platforms"`
 		Caption          string            `json:"Caption"`
-	}, len(newInstances))
-	for i := range newInstances {
-		typeToSave[i].Name = newInstances[i].Name
-		typeToSave[i].ImgFolders = newInstances[i].ImgFolders
-		typeToSave[i].QueueDelay = newInstances[i].QueueDelay
-		typeToSave[i].PostDelay = newInstances[i].PostDelay
-		typeToSave[i].StartupPostDelay = newInstances[i].StartupPostDelay
-		typeToSave[i].NextPostTime = newInstances[i].NextPostTime
-		typeToSave[i].Platforms = newInstances[i].Platforms
-		typeToSave[i].Caption = newInstances[i].Caption
+	}, len(new))
+	for i := range new {
+		typeToSave[i].Name = new[i].Name
+		typeToSave[i].ImgFolders = new[i].ImgFolders
+		typeToSave[i].QueueDelay = new[i].QueueDelay
+		typeToSave[i].PostDelay = new[i].PostDelay
+		typeToSave[i].StartupPostDelay = new[i].StartupPostDelay
+		typeToSave[i].NextPostTime = instances.c[i].NextPostTime
+		typeToSave[i].Platforms = new[i].Platforms
+		typeToSave[i].Caption = new[i].Caption
 	}
 	dataToSave, err := json.MarshalIndent(typeToSave, "", "\t")
 	if err != nil {

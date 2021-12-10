@@ -21,19 +21,21 @@ import (
 )
 
 type instance struct {
-	Name             string            `json:"Name"`
-	ImgFolders       []string          `json:"ImgFolders"`
-	QueueDelay       string            `json:"QueueDelay"`
-	PostDelay        string            `json:"PostDelay"`
-	StartupPostDelay string            `json:"StartupPostDelay"`
-	NextPostTime     int64             `json:"NextPostTime"`
-	Platforms        map[string]string `json:"Platforms"`
-	Caption          string            `json:"Caption"`
-	ItemsInQueue     int               `json:"ItemsInQueue"`
+	Name              string            `json:"Name"`
+	ImgFolders        []string          `json:"ImgFolders"`
+	QueueDelay        string            `json:"QueueDelay"`
+	PostDelay         string            `json:"PostDelay"`
+	StartupPostDelay  string            `json:"StartupPostDelay"`
+	NextPostTime      int64             `json:"NextPostTime"`
+	Platforms         map[string]string `json:"Platforms"`
+	Caption           string            `json:"Caption"`
+	ItemsInQueue      int               `json:"ItemsInQueue"`
+	restartMonitoring chan int
 }
 
 type allInstances struct {
-	c []*instance
+	c         []*instance
+	readySend chan int
 	// mutex ensures only one instance can post at a time
 	mu sync.Mutex
 }
@@ -270,7 +272,13 @@ func (instance *instance) appendTxtFile(shortQueue [][]string, queueOrPost strin
 
 // monitors folders, manages queueing and posting, *allInstances is being sent
 // here to access its Mutex to prevent data races
-func (instance *instance) monitorFolder(readySend chan string, all *allInstances) {
+func (instance *instance) monitorFolder(postDelayReset bool, all *allInstances) {
+	timeToExit := false
+	exitChan := make(chan int)
+
+	rename := -1
+
+	queueTimer := time.NewTimer(instance.queueDelay())
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -278,22 +286,30 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 	}
 	defer watcher.Close()
 
-	rename := -1
+	for _, folder := range instance.ImgFolders {
+		err = watcher.Add(folder)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
-	done := make(chan int)
 	go func() {
 		var shortQueue [][]string
 
-		queueTimer := time.NewTimer(instance.queueDelay())
 		queueTimer.Stop()
 
 		var postTimer *time.Timer
 		var postTimerCheck *time.Timer
+		guiSend := make(chan string, 1)
 
 		// if NextPostTime has passed, then schedule a new NextPostTime
 		// time.Sleep(3 * time.Second)
-		if time.Now().UnixMilli() > instance.NextPostTime {
-			fmt.Println(instance.Name + ": scheduled post time has passed. Scheduling new post time.")
+		if time.Now().UnixMilli() > instance.NextPostTime || postDelayReset {
+			if time.Now().UnixMilli() > instance.NextPostTime {
+				fmt.Println(instance.Name + ": scheduled post time has passed. Scheduling new post time.")
+			} else {
+				fmt.Println(instance.Name + ": postDelay reset. Scheduling new post time.")
+			}
 			switch instance.StartupPostDelay {
 			case "random":
 				// my funny seed algorithm, mixes part of instance name with current time
@@ -322,6 +338,7 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 			default:
 				log.Panic("StartupPostDelay value must be \"random\", \"full\", or \"none\". Check your offpost.json")
 			}
+			guiSend <- ""
 		} else { // use the saved NextPostTime
 			fmt.Println(instance.Name + ": using scheduled post time.")
 			timeUntilNextPost := time.Until(time.UnixMilli(instance.NextPostTime))
@@ -329,17 +346,15 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 			postTimerCheck = time.NewTimer(timeUntilNextPost)
 		}
 
-		readySend <- instance.Name
+		all.readySend <- 0
 
-		guiSend := make(chan string, 1)
-		for {
+		for !timeToExit {
 
 			// this select waits for either a new file, or a shortQueue timer to expire
 			select {
 			case event := <-watcher.Events:
-				tweetlink := "Tweet error/n"
 
-				// event.Name returns full filepath, this isolates the filename
+				// event.Name returns full filepath
 				filename := strings.ReplaceAll(event.Name, "\\", "/") //[strings.LastIndex(event.Name, "\\")+1:]
 				switch event.Op.String() {
 				case "CREATE":
@@ -392,11 +407,9 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 						queueTimer.Reset(instance.queueDelay())
 						fmt.Printf("%v timer reset\n", instance.Name)
 					}
-				} // end of event switch
-
-				if tweetlink == "Tweet error\n" {
-					fmt.Println(tweetlink)
 				}
+				// end of event switch
+
 			case <-queueTimer.C:
 				all.mu.Lock()
 				if len(shortQueue) != 0 {
@@ -415,7 +428,7 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 						postTimerCheck.Stop()
 						postTimerCheck.Reset(instance.postDelay())
 						instance.NextPostTime = time.Now().Add(instance.postDelay()).UnixMilli()
-						all.saveSettings(all.c)
+						all.saveSettings(false, all.c)
 					}
 
 					guiSend <- ""
@@ -435,7 +448,7 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 					postTimerCheck.Stop()
 					postTimerCheck.Reset(instance.postDelay())
 					instance.NextPostTime = time.Now().Add(instance.postDelay()).UnixMilli()
-					all.saveSettings(all.c)
+					all.saveSettings(false, all.c)
 
 					guiSend <- ""
 					all.mu.Unlock()
@@ -450,20 +463,17 @@ func (instance *instance) monitorFolder(readySend chan string, all *allInstances
 					wsSend <- ""
 				}
 				all.mu.Unlock()
+			case <-exitChan:
+				timeToExit = true
 
 			} // end of timer switch
-
 		}
 	}()
 
-	for _, folder := range instance.ImgFolders {
-		err = watcher.Add(folder)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+	// send to exit chan to close watcher goroutine
+	exitChan <- <-instance.restartMonitoring
 
-	<-done
+	queueTimer.Reset(0 * time.Second)
 }
 
 func main() {
@@ -513,14 +523,16 @@ offpost.json settings loaded.
 	fmt.Print("\n")
 
 	// readySend ensures the instance data is gathered before sending to GUI
-	readySend := make(chan string)
+	instances.readySend = make(chan int)
 	for i := range instances.c {
+		instances.c[i].restartMonitoring = make(chan int)
 		instances.c[i].ItemsInQueue = instances.c[i].countQueueItems()
-		go instances.c[i].monitorFolder(readySend, &instances)
-		<-readySend
+		go instances.c[i].monitorFolder(false, &instances)
+		<-instances.readySend
 	}
+	fmt.Print("\n")
 	// saving at this point to save rescheduled post times
-	instances.saveSettings(instances.c)
+	instances.saveSettings(false, instances.c)
 
 	// -----------------------------------------
 	// this websocket serves instance config whenever something is posted or queued
