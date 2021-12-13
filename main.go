@@ -52,50 +52,48 @@ func loadInstances() []*instance {
 	return instancesRaw
 }
 
-func (instances *allInstances) initQueue() {
-	for _, instance := range instances.c {
-		for _, folder := range instance.ImgFolders {
-			// read files from folder
-			fileStatus := make(map[string]string) // filename:p for posted, filename:q for queued
-			files, _ := ioutil.ReadDir(folder)
+func (instance *instance) initQueue() {
+	for _, folder := range instance.ImgFolders {
+		// read files from folder
+		fileStatus := make(map[string]string) // filename:p for posted, filename:q for queued
+		files, _ := ioutil.ReadDir(folder)
 
-			for _, file := range files {
-				dotIndex := strings.LastIndex(file.Name(), ".")
-				// if the directory entry is a folder
-				if dotIndex == -1 {
-					continue
-				}
-
-				filepath := folder + "/" + file.Name()
-
-				filetype := file.Name()[dotIndex:]
-				if filetype == ".jpg" || filetype == ".png" || filetype == ".webp" || filetype == ".txt" || filetype == ".mp4" {
-					fileStatus[filepath] = "n"
-				}
+		for _, file := range files {
+			dotIndex := strings.LastIndex(file.Name(), ".")
+			// if the directory entry is a folder
+			if dotIndex == -1 {
+				continue
 			}
 
-			readFromFile := instance.readTxtFile("queue", false)
-			for _, val := range readFromFile {
-				fileStatus[val[0]] = "q"
-			}
+			filepath := folder + "/" + file.Name()
 
-			readFromFile = instance.readTxtFile("posted", false)
-			for _, val := range readFromFile {
-				fileStatus[val[0]] = "p"
+			filetype := file.Name()[dotIndex:]
+			if filetype == ".jpg" || filetype == ".png" || filetype == ".webp" || filetype == ".txt" || filetype == ".mp4" {
+				fileStatus[filepath] = "n"
 			}
-
-			var newQueue [][]string
-			for key, value := range fileStatus {
-				if value == "n" {
-					newQueue = append(newQueue, []string{key})
-				}
-			}
-
-			newQueue = groupOrganize(newQueue)
-			instance.appendTxtFile(newQueue, "queue")
 		}
 
+		readFromFile := instance.readTxtFile("queue", false)
+		for _, val := range readFromFile {
+			fileStatus[val[0]] = "q"
+		}
+
+		readFromFile = instance.readTxtFile("posted", false)
+		for _, val := range readFromFile {
+			fileStatus[val[0]] = "p"
+		}
+
+		var newQueue [][]string
+		for key, value := range fileStatus {
+			if value == "n" {
+				newQueue = append(newQueue, []string{key})
+			}
+		}
+
+		newQueue = groupOrganize(newQueue)
+		instance.appendTxtFile(newQueue, "queue")
 	}
+	instance.ItemsInQueue = instance.countQueueItems()
 }
 
 // instance.QueueDelay and instance.PostDelay are stored as strings,
@@ -214,7 +212,10 @@ func groupOrganize(shortQueue [][]string) [][]string {
 }
 
 func (instance *instance) isQueueEmpty() bool {
-	queueInfo, _ := os.Stat("./userdata/" + instance.Name + "_queue.txt")
+	queueInfo, err := os.Stat("./userdata/" + instance.Name + "_queue.txt")
+	if err != nil {
+		log.Panic(instance.Name, "_queue.txt not found")
+	}
 	return queueInfo.Size() == 0
 }
 
@@ -272,6 +273,8 @@ func (instance *instance) appendTxtFile(shortQueue [][]string, queueOrPost strin
 // monitors folders, manages queueing and posting, *allInstances is being sent
 // here to access its Mutex to prevent data races
 func (instance *instance) monitorFolder(postDelayReset bool, all *allInstances) {
+	instance.restartMonitoring = make(chan int)
+	instance.initQueue()
 	timeToExit := false
 	exitChan := make(chan int)
 
@@ -477,7 +480,6 @@ func (instance *instance) monitorFolder(postDelayReset bool, all *allInstances) 
 
 func main() {
 	instances := allInstances{c: loadInstances()}
-	instances.initQueue()
 	fmt.Print(` _______  _______  _______  _______  _______  _______ _________
 (  ___  )(  ____ \(  ____ \(  ____ )(  ___  )(  ____ \\__   __/
 | (   ) || (    \/| (    \/| (    )|| (   ) || (    \/   ) (
@@ -524,8 +526,6 @@ offpost.json settings loaded.
 	// readySend ensures the instance data is gathered before sending to GUI
 	instances.readySend = make(chan int)
 	for i := range instances.c {
-		instances.c[i].restartMonitoring = make(chan int)
-		instances.c[i].ItemsInQueue = instances.c[i].countQueueItems()
 		go instances.c[i].monitorFolder(false, &instances)
 		<-instances.readySend
 	}

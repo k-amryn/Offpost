@@ -124,31 +124,39 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 func (instances *allInstances) saveSettings(fromGui bool, new []*instance) {
 	if fromGui {
 		instances.mu.Lock()
-		for i := range instances.c {
 
-			instances.c[i].Name = new[i].Name
-			instances.c[i].Caption = new[i].Caption
-			instances.c[i].StartupPostDelay = new[i].StartupPostDelay
+		if len(new) > len(instances.c) {
+			newOne := len(new) - 1
+			instances.c = append(instances.c, new[newOne])
+			go instances.c[newOne].monitorFolder(false, instances)
+			<-instances.readySend
+		} else {
+			for i := range instances.c {
+				instances.c[i].Name = new[i].Name
+				instances.c[i].Caption = new[i].Caption
+				instances.c[i].StartupPostDelay = new[i].StartupPostDelay
+				new[i].NextPostTime = instances.c[i].NextPostTime
 
-			postDelayReset := false
-			needsRestart := false
-			if !sliceEqual(instances.c[i].ImgFolders, new[i].ImgFolders) {
-				instances.c[i].ImgFolders = new[i].ImgFolders
-				needsRestart = true
-			}
-			if instances.c[i].PostDelay != new[i].PostDelay {
-				instances.c[i].PostDelay = new[i].PostDelay
-				needsRestart = true
-				postDelayReset = true
-			}
-			if instances.c[i].QueueDelay != new[i].QueueDelay {
-				instances.c[i].QueueDelay = new[i].QueueDelay
-				needsRestart = true
-			}
-			if needsRestart {
-				instances.c[i].restartMonitoring <- 0
-				go instances.c[i].monitorFolder(postDelayReset, instances)
-				<-instances.readySend
+				postDelayReset := false
+				needsRestart := false
+				if !sliceEqual(instances.c[i].ImgFolders, new[i].ImgFolders) {
+					instances.c[i].ImgFolders = new[i].ImgFolders
+					needsRestart = true
+				}
+				if instances.c[i].PostDelay != new[i].PostDelay {
+					instances.c[i].PostDelay = new[i].PostDelay
+					needsRestart = true
+					postDelayReset = true
+				}
+				if instances.c[i].QueueDelay != new[i].QueueDelay {
+					instances.c[i].QueueDelay = new[i].QueueDelay
+					needsRestart = true
+				}
+				if needsRestart {
+					instances.c[i].restartMonitoring <- 0
+					go instances.c[i].monitorFolder(postDelayReset, instances)
+					<-instances.readySend
+				}
 			}
 		}
 		instances.mu.Unlock()
@@ -173,7 +181,7 @@ func (instances *allInstances) saveSettings(fromGui bool, new []*instance) {
 		typeToSave[i].QueueDelay = new[i].QueueDelay
 		typeToSave[i].PostDelay = new[i].PostDelay
 		typeToSave[i].StartupPostDelay = new[i].StartupPostDelay
-		typeToSave[i].NextPostTime = instances.c[i].NextPostTime
+		typeToSave[i].NextPostTime = new[i].NextPostTime
 		typeToSave[i].Platforms = new[i].Platforms
 		typeToSave[i].Caption = new[i].Caption
 	}
