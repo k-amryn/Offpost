@@ -36,8 +36,7 @@ type instance struct {
 type allInstances struct {
 	c         []*instance
 	readySend chan int
-	// mutex ensures only one instance can post at a time
-	mu sync.Mutex
+	mu        sync.Mutex
 }
 
 var wsSend = make(chan string, 1)
@@ -258,7 +257,7 @@ func (instance *instance) readTxtFile(queueOrPost string, grouped bool) [][]stri
 }
 
 func (instance *instance) appendTxtFile(shortQueue [][]string, queueOrPost string) {
-	f, err := os.OpenFile("./userdata/"+instance.Name+"_"+queueOrPost+".txt", os.O_APPEND|os.O_CREATE, 0666)
+	f, err := os.OpenFile("./userdata/"+instance.Name+"_"+queueOrPost+".txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -303,12 +302,11 @@ func (instance *instance) monitorFolder(postDelayReset bool, all *allInstances) 
 		guiSend := make(chan string, 1)
 
 		// if NextPostTime has passed, then schedule a new NextPostTime
-		// time.Sleep(3 * time.Second)
 		if time.Now().UnixMilli() > instance.NextPostTime || postDelayReset {
 			if time.Now().UnixMilli() > instance.NextPostTime {
-				fmt.Println(instance.Name + ": scheduled post time has passed. Scheduling new post time.")
+				fmt.Println(instance.Name + ": Scheduled post time has passed. Scheduling new post time.")
 			} else {
-				fmt.Println(instance.Name + ": postDelay reset. Scheduling new post time.")
+				fmt.Println(instance.Name + ": Post Delay reset. Scheduling new post time.")
 			}
 			switch instance.StartupPostDelay {
 			case "random":
@@ -336,11 +334,11 @@ func (instance *instance) monitorFolder(postDelayReset bool, all *allInstances) 
 				postTimerCheck = time.NewTimer(0 * time.Second)
 				instance.NextPostTime = time.Now().UnixMilli()
 			default:
-				log.Panic("StartupPostDelay value must be \"random\", \"full\", or \"none\". Check your offpost.json")
+				log.Panic("StartupPostDelay value must be \"random\", \"full\", or \"none\". Check your offpost.json.")
 			}
 			guiSend <- ""
 		} else { // use the saved NextPostTime
-			fmt.Println(instance.Name + ": using scheduled post time.")
+			fmt.Println(instance.Name + ": Using scheduled post time.")
 			timeUntilNextPost := time.Until(time.UnixMilli(instance.NextPostTime))
 			postTimer = time.NewTimer(timeUntilNextPost)
 			postTimerCheck = time.NewTimer(timeUntilNextPost)
@@ -472,6 +470,7 @@ func (instance *instance) monitorFolder(postDelayReset bool, all *allInstances) 
 
 	// send to exit chan to close watcher goroutine
 	exitChan <- <-instance.restartMonitoring
+	fmt.Println(instance.Name + ": refreshing folder monitoring")
 
 	queueTimer.Reset(0 * time.Second)
 }

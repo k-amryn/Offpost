@@ -118,9 +118,6 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 		default:
 			fmt.Println("Invalid socket message received.")
 		}
-
-		fmt.Println("---")
-		// fmt.Println("Received:", string(p))
 	}
 }
 
@@ -128,17 +125,31 @@ func (instances *allInstances) saveSettings(fromGui bool, new []*instance) {
 	if fromGui {
 		instances.mu.Lock()
 		for i := range instances.c {
-			nextPost := instances.c[i].NextPostTime
-			instances.c[i] = new[i]
-			instances.c[i].NextPostTime = nextPost
-			// instances.c[i].Caption = new[i].Caption
-			// if instances.c[i].PostDelay != new[i].PostDelay {
-			// 	instances.c[i].PostDelay = new[i].PostDelay
 
-			// 	instances.c[i].restartMonitoring <- 0
-			go instances.c[i].monitorFolder(true, instances)
-			<-instances.readySend
-			// }
+			instances.c[i].Name = new[i].Name
+			instances.c[i].Caption = new[i].Caption
+			instances.c[i].StartupPostDelay = new[i].StartupPostDelay
+
+			postDelayReset := false
+			needsRestart := false
+			if !sliceEqual(instances.c[i].ImgFolders, new[i].ImgFolders) {
+				instances.c[i].ImgFolders = new[i].ImgFolders
+				needsRestart = true
+			}
+			if instances.c[i].PostDelay != new[i].PostDelay {
+				instances.c[i].PostDelay = new[i].PostDelay
+				needsRestart = true
+				postDelayReset = true
+			}
+			if instances.c[i].QueueDelay != new[i].QueueDelay {
+				instances.c[i].QueueDelay = new[i].QueueDelay
+				needsRestart = true
+			}
+			if needsRestart {
+				instances.c[i].restartMonitoring <- 0
+				go instances.c[i].monitorFolder(postDelayReset, instances)
+				<-instances.readySend
+			}
 		}
 		instances.mu.Unlock()
 	}
@@ -171,6 +182,18 @@ func (instances *allInstances) saveSettings(fromGui bool, new []*instance) {
 		log.Panic(err)
 	}
 	os.WriteFile("./userdata/offpost.json", dataToSave, 0666)
+}
+
+func sliceEqual(a []string, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // ------------------------ end svelte gui functions ---------------------------
