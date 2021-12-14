@@ -26,11 +26,10 @@
     for (let i = 0; i < $ginstances.length; i++) {
       if (baseTaken) {
         if ($ginstances[i].Name == "New Instance (" + unusedNum.toString() + ")") {
-          console.log("New Instance", unusedNum, "is taken")
           unusedNum++
+          i = 0
         }
       } else if ($ginstances[i].Name == "New Instance") {
-        console.log("base is taken")
         baseTaken = true
         i = 0
       }
@@ -44,7 +43,6 @@
 
     if (!$unsavedChanges) {
       $ginstances = [...$ginstances, {
-        // Name: "New Instance" + Math.random().toString(),
         Name: name,
         ImgFolders: [""],
         QueueDelay: {num: 30, unit: "seconds"},
