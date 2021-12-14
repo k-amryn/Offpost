@@ -12,10 +12,11 @@
 
   var serversocket = new WebSocket("ws://localhost:8081/config");
   
-  serversocket.onmessage = function(e) {
-    $ginstances = toGInst(JSON.parse(e.data))
+  // var justOpened: boolean = true
+  serversocket.onmessage = async function(e) {
+    $ginstances = await toGInst(JSON.parse(e.data))
     $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
-  };
+  }
 
   // each message sent over the server socket has an identifier at the beginning
   // of the string in the form of "[letter], "
@@ -87,9 +88,9 @@
     return fulldate
   }
 
-
-  function toGInst(data: any[]): any[] {
-    data.forEach(e => {
+  async function toGInst(data: any[]): Promise<any[]> {
+    for (let i = 0; i < data.length; i++) {
+      let e = data[i]
       e.Name = e.Name
       e.ImgFolders = e.ImgFolders
       e.QueueDelay = separateTimeUnit(e.QueueDelay)
@@ -100,8 +101,14 @@
       e.ItemsInQueue = e.ItemsInQueue
       e.NextPostTime = dateFromUnixTime(e.NextPostTime)
       e.Status = e.Status
-      e.Image = "./testinguserdata/" + e.Name + ".webp"
-    })
+
+      let r = await fetch("./testinguserdata/" + e.Name + ".webp")
+      if (r.status === 404) {
+        e.Image = "./new_instance.svg"
+      } else {
+        e.Image = "./testinguserdata/" + e.Name + ".webp"
+      }
+    }
     return data
   }
 

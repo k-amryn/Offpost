@@ -19,9 +19,33 @@
   }
 
   function newInstance() {
+    // new instances have names with increasing numbers
+    var name: string
+    var baseTaken: boolean = false
+    var unusedNum: number = 2
+    for (let i = 0; i < $ginstances.length; i++) {
+      if (baseTaken) {
+        if ($ginstances[i].Name == "New Instance (" + unusedNum.toString() + ")") {
+          console.log("New Instance", unusedNum, "is taken")
+          unusedNum++
+        }
+      } else if ($ginstances[i].Name == "New Instance") {
+        console.log("base is taken")
+        baseTaken = true
+        i = 0
+      }
+    }
+
+    if (baseTaken) {
+      name = "New Instance (" + unusedNum.toString() + ")"
+    } else {
+      name = "New Instance"
+    }
+
     if (!$unsavedChanges) {
       $ginstances = [...$ginstances, {
-        Name: "testing" + Math.random().toString(),
+        // Name: "New Instance" + Math.random().toString(),
+        Name: name,
         ImgFolders: [""],
         QueueDelay: {num: 30, unit: "seconds"},
         PostDelay: {num: 5, unit: "hours"},
