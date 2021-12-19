@@ -16,6 +16,7 @@ require (
 	github.com/getlantern/systray v1.1.0
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gorilla/websocket v1.4.2
+	github.com/stretchr/testify v1.4.0 // indirect
 	golang.org/x/net v0.0.0-20211205041911-012df41ee64c // indirect
 	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
 )

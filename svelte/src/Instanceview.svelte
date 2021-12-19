@@ -16,6 +16,13 @@
     })
   }
 
+  function dispatchDialogue(type: string, instance: number) {
+    dispatch('dialogue', {
+      type: type,
+      instance: instance
+    })
+  }
+
   // Copies config, restores copy when user Cancels changes. Don't copy for
   // newly created instances, because "canceling" should delete new instance
   if ($ginstances[$activeInstance].Status != "new-instance") {
@@ -93,6 +100,10 @@
     } 
     $ginstances = JSON.parse(JSON.stringify($ginstancesOld))
   }
+
+  function confirmDelete() {
+    dispatchDialogue("delete", $activeInstance)
+  }
 </script>
 
 
@@ -123,10 +134,7 @@
   .subtext {
     font-size: var(--small-font);
     text-decoration: underline;
-    margin-top: 0px;
     cursor: pointer;
-    display: inline-block;
-    transform: translateY(-7px)
   }
 
   .setting-section {
@@ -137,6 +145,13 @@
 
   .setting-label {
     margin-top: 7px;
+  }
+
+  #folder-rows {
+    width: 100%;
+    display: grid;
+    grid-template-rows: repeat(auto-fill, 1fr);
+    grid-gap: 10px;
   }
 
   .folder-row {
@@ -152,7 +167,7 @@
     height: 100%;
     display: grid;
     place-items: center;
-    padding-top: 0px;
+    width: 18px;
   }
 
   .svg-holder:not(.status-indicator) {
@@ -163,41 +178,28 @@
     width: 100%;
   }
 
-  select, button, input {
-    background: transparent;
-    border: 2px solid black;
-    border-radius: 5px;
-    height: 36px;
-    padding-top: 0px;
-    padding-bottom: 0px;
-  }
-
-  select, button {
-    cursor: pointer;
+  #platform-rows {
+    width: 100%;
+    display: grid;
+    grid-template-rows: repeat(auto-fill, 1fr);
+    grid-gap: 10px;
   }
 
   .platform-row {
     display: grid;
-    grid-template-columns: min-content auto auto auto;
-    width: min-content;
-    gap: 10px;
-  }
-
-  .platform-row .svg-holder {
-    margin-left: 10px;
+    grid-template-columns: repeat(4, auto);
+    width: fit-content;
+    grid-gap: 10px;
   }
 
   .caption-input {
     width: 100%;
-    border: 2px solid black;
-    border-radius: 5px;
     resize: vertical;
   }
 
   .caption-subtext {
     font-size: var(--small-font);
-    display: inline-block;
-    transform: translateY(-9px)
+    display: block;
   }
 
   .caption-subtext span {
@@ -221,28 +223,26 @@
   .post-delay, .queue-delay {
     display: grid;
     grid-template-columns: min-content min-content;
-    gap: 10px;
+    grid-gap: 10px;
   }
 
   .minus, .plus {
-    height: 32px;
-    margin-bottom: 7px;
+    box-sizing: border-box;
+    height: 36px;
     display: grid;
     place-items: center;
     cursor: pointer;
+    border-top: 2px solid black;
+    border-bottom: 2px solid black;
   }
 
   .minus {
-    border-top: 2px solid black;
-    border-bottom: 2px solid black;
     border-left: 2px solid black;
     border-top-left-radius: 5px;
     border-bottom-left-radius: 5px;
   }
 
   .plus {
-    border-top: 2px solid black;
-    border-bottom: 2px solid black;
     border-right: 2px solid black;
     border-bottom-right-radius: 5px;
     border-top-right-radius: 5px;
@@ -254,7 +254,7 @@
     display: grid;
     grid-template-columns: min-content min-content;
     align-items: center;
-    gap: 6px;
+    grid-gap: 6px;
     width: min-content;
     font-size: var(--small-font);
     height: 20px;
@@ -275,7 +275,6 @@
     align-items: center;
     padding: 0px 20px 0px 20px;
     box-sizing: border-box;
-    /* background: red; */
   }
 
   #status-bar span {
@@ -283,7 +282,6 @@
   }
 
   #status-bar button {
-    margin-top: 6px;
     width: 80px;
   }
 
@@ -307,25 +305,27 @@
     </div>
     <div class="setting-section">
       <div class="setting-label">Folders:</div>
-      <div class="setting-content">
-        {#each instance.ImgFolders as folder, i}
-        <div class="folder-row">
-            <input class="folder-input" bind:value={folder} on:input={() => $unsavedChanges = true}>
-            <div class="svg-holder">
-              <svg width="18px" style="margin-bottom: 12px;" viewBox="0 0 25 21" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5">
-                <path d="M2412 271v31h47v-26h-25l-4-5h-18z" fill="none" stroke="#000" stroke-width="5.8" transform="matrix(.45762 0 0 .56483 -1102 -151)"/>
-              </svg>
+      <div class="setting-content folders">
+        <div id="folder-rows">
+          {#each instance.ImgFolders as folder, i}
+          <div class="folder-row">
+              <input class="folder-input" bind:value={folder} on:input={() => $unsavedChanges = true}>
+              <div class="svg-holder">
+                <svg width="18px" style="margin-bottom: 2px;" viewBox="0 0 25 21" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5">
+                  <path d="M2412 271v31h47v-26h-25l-4-5h-18z" fill="none" stroke="#000" stroke-width="5.8" transform="matrix(.45762 0 0 .56483 -1102 -151)"/>
+                </svg>
+              </div>
+              <div class="svg-holder" on:click={() => removeFolder(i)}>
+                <svg width="12px" version="1.1" viewBox="0 0 5.4152 5.4152" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="translate(-322.81 -103.89)" fill="none" stroke="#de3e39" stroke-linecap="round">
+                  <path d="m323.31 104.39 4.4152 4.4152"/>
+                  <path d="m327.73 104.39-4.4152 4.4152"/>
+                  </g>
+                </svg>
+              </div>
             </div>
-            <div class="svg-holder" on:click={() => removeFolder(i)}>
-              <svg width="12px" style="margin-bottom: 10px;" version="1.1" viewBox="0 0 5.4152 5.4152" xmlns="http://www.w3.org/2000/svg">
-                <g transform="translate(-322.81 -103.89)" fill="none" stroke="#de3e39" stroke-linecap="round">
-                <path d="m323.31 104.39 4.4152 4.4152"/>
-                <path d="m327.73 104.39-4.4152 4.4152"/>
-                </g>
-              </svg>
-            </div>
-          </div>
-        {/each}
+          {/each}
+        </div>
         <span on:click={() => addFolder()} class="subtext">Add new folder</span>
 
       </div>
@@ -334,43 +334,45 @@
     <div class="setting-section">
       <div class="setting-label">Platforms:</div>
       <div class="setting-content">
-        {#each Object.keys(instance.Platforms) as platform}
-          <div class="platform-row">
-            <select value={platform} on:change={() => $unsavedChanges = true}>
-              <option value="twitter">Twitter</option>
-              <option value="facebook">Facebook</option>
-              <option value="tumblr">Tumblr</option>
-            </select>
-            <button on:click={() => configurePlatform()}>Configure</button>
-            <div class="svg-holder status-indicator">
-              <svg width="12px" style="margin-bottom: 8px" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
-                <g transform="matrix(1,0,0,1,-1223.59,-1560.19)">
-                <g transform="matrix(1,0,0,1,0,1101.51)">
-                <g transform="matrix(0.521739,0,0,0.521739,591.235,-354.719)">
-                <circle cx="1225.71" cy="1572.7" r="13.69" style="fill:rgb(65,147,62);"/>
-                </g>
-                </g>
-                </g>
-              </svg>
+        <div id="platform-rows">
+          {#each Object.keys(instance.Platforms) as platform}
+            <div class="platform-row">
+              <select value={platform} on:change={() => $unsavedChanges = true}>
+                <option value="twitter">Twitter</option>
+                <option value="facebook">Facebook</option>
+                <option value="tumblr">Tumblr</option>
+              </select>
+              <button on:click={() => configurePlatform()}>Configure</button>
+              <div class="svg-holder status-indicator">
+                <svg width="12px" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
+                  <g transform="matrix(1,0,0,1,-1223.59,-1560.19)">
+                  <g transform="matrix(1,0,0,1,0,1101.51)">
+                  <g transform="matrix(0.521739,0,0,0.521739,591.235,-354.719)">
+                  <circle cx="1225.71" cy="1572.7" r="13.69" style="fill:rgb(65,147,62);"/>
+                  </g>
+                  </g>
+                  </g>
+                </svg>
+              </div>
+              <div class="svg-holder">
+                <svg width="14px" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
+                  <g transform="matrix(1,0,0,1,-1254.39,-1559.84)">
+                  <g transform="matrix(1,0,0,1,0,1101.51)">
+                  <g transform="matrix(1,0,0,1,22.3939,-5.68736)">
+                  <g transform="matrix(6,0,0,6,-6195,-9118.05)">
+                  <path d="M1239,1597.34L1238.34,1597.34C1238.15,1597.34 1238,1597.49 1238,1597.68L1238,1599.01C1238,1599.19 1238.15,1599.34 1238.33,1599.34L1239.67,1599.34C1239.85,1599.34 1240,1599.19 1240,1599.01C1240,1598.72 1240,1598.34 1240,1598.34" style="fill:none;stroke:black;stroke-width:0.33px;"/>
+                  </g>
+                  <g transform="matrix(1,0,0,1,0,-1126.34)">
+                  <path d="M1239,1598.34L1245.98,1591.36L1242,1591.36L1245.98,1591.36L1245.98,1595.34" style="fill:none;stroke:black;stroke-width:2px;"/>
+                  </g>
+                  </g>
+                  </g>
+                  </g>
+                </svg>
+              </div> 
             </div>
-            <div class="svg-holder">
-              <svg width="14px" style="margin-bottom: 10px;fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
-                <g transform="matrix(1,0,0,1,-1254.39,-1559.84)">
-                <g transform="matrix(1,0,0,1,0,1101.51)">
-                <g transform="matrix(1,0,0,1,22.3939,-5.68736)">
-                <g transform="matrix(6,0,0,6,-6195,-9118.05)">
-                <path d="M1239,1597.34L1238.34,1597.34C1238.15,1597.34 1238,1597.49 1238,1597.68L1238,1599.01C1238,1599.19 1238.15,1599.34 1238.33,1599.34L1239.67,1599.34C1239.85,1599.34 1240,1599.19 1240,1599.01C1240,1598.72 1240,1598.34 1240,1598.34" style="fill:none;stroke:black;stroke-width:0.33px;"/>
-                </g>
-                <g transform="matrix(1,0,0,1,0,-1126.34)">
-                <path d="M1239,1598.34L1245.98,1591.36L1242,1591.36L1245.98,1591.36L1245.98,1595.34" style="fill:none;stroke:black;stroke-width:2px;"/>
-                </g>
-                </g>
-                </g>
-                </g>
-              </svg>
-            </div> 
-          </div>
-        {/each}
+          {/each}
+        </div>
         <span class="subtext">Add new platform</span>
       </div>
     </div>
@@ -472,7 +474,7 @@
       </div>
 
       <div class="delete-instance">
-        <span>Delete instance</span>
+        <span on:click={() => confirmDelete()}>Delete instance</span>
       </div>
     {/if}
   </div>
@@ -487,7 +489,7 @@
     {:else if instance.ItemsInQueue === 0}
       <span class="waiting">Waiting for new image</span>
     {/if}
-    <div id="status-buttons">
+    <div class="button-group">
       {#if !$unsavedChanges}
       <button>Pause</button>
       {:else}

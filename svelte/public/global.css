@@ -30,12 +30,40 @@ label {
 }
 
 input, button, select, textarea {
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	background-color: white;
 	font-family: inherit;
 	font-size: inherit;
-	-webkit-padding: 0.4em 0;
-	padding: 0.4em;
-	margin: 0 0 0.5em 0;
 	box-sizing: border-box;
-	border: 1px solid #ccc;
-	border-radius: 2px;
+	border: 2px solid black;
+	padding: 5px 8px 5px 8px;
+	border-radius: 5px;
+	margin: 0;
+}
+
+textarea {
+	padding-top: 6px;
+}
+
+select, button, input {
+	background: transparent;
+	height: 36px;
+}
+
+select, button {
+	cursor: pointer;
+}
+
+.button-group {
+	display: flex;
+	gap: 10px;
+}
+
+select {
+	background: url('data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTExIDY3IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxLjUiPjxwYXRoIGQ9Ik05OSAxMUw1NSA1NSAxMSAxMSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjIyLjQiLz48L3N2Zz4=');
+	background-size: 10px;
+  background-position: calc(100% - 5px) center;
+  background-repeat: no-repeat;
+	padding-right: 25px;
 }
