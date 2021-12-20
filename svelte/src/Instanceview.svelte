@@ -90,7 +90,7 @@
   function saveInstanceSettings() {
     $unsavedChanges = false
     $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
-    dispatchSocketMessage("s, " + JSON.stringify($ginstances))
+    dispatchSocketMessage("s " + JSON.stringify($ginstances))
   }
 
   function cancelInstanceSettings() {

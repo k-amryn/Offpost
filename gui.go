@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/getlantern/systray"
@@ -110,21 +112,48 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 
 		// this switch is used to identify the incoming message by the first 3
 		// characters in the string
-		switch string(p)[:3] {
-		case "s, ":
+		msg := string(p)
+
+		switch msg[:strings.Index(msg, " ")] {
+		case "s":
 			var data []*instance
-			json.Unmarshal(p[3:], &data)
+			json.Unmarshal(p[2:], &data)
 			instances.saveSettings(true, data)
+		case "d":
+			i, err := strconv.Atoi(msg[2:])
+			if err != nil {
+				log.Panic(err, "Delete instance error")
+			}
+			instances.deleteInst(i)
 		default:
 			fmt.Println("Invalid socket message received.")
 		}
 	}
 }
 
+func (instances *allInstances) deleteInst(index int) {
+	instances.mu.Lock()
+	fmt.Println("we're about to delete " + instances.c[index].Name)
+	fmt.Print("\n")
+
+	instNew := []*instance{}
+	for i, e := range instances.c {
+		if i != index {
+			instNew = append(instNew, e)
+		}
+	}
+	instances.c[index].restartMonitoring <- 1
+	instances.c = instNew
+	instances.mu.Unlock()
+
+	instances.saveSettings(false, instNew)
+}
+
 func (instances *allInstances) saveSettings(fromGui bool, new []*instance) {
 	if fromGui {
 		instances.mu.Lock()
 
+		fmt.Println("Saving settings.")
 		if len(new) > len(instances.c) {
 			newOne := len(new) - 1
 			instances.c = append(instances.c, new[newOne])
@@ -159,6 +188,7 @@ func (instances *allInstances) saveSettings(fromGui bool, new []*instance) {
 				}
 			}
 		}
+		fmt.Print("\n")
 		instances.mu.Unlock()
 	}
 

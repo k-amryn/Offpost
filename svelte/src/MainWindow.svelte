@@ -31,7 +31,7 @@
   }
 
   function deleteInstance(instance: number) {
-    $activeInstance =-1
+    $activeInstance = -1
     $unsavedChanges = false
 
     dialogueActive = false
@@ -39,6 +39,8 @@
     newGinst.push(...$ginstances.slice(instance+1))
 
     $ginstances = newGinst
+
+    dispatchSocketMessage("d " + instance)
 
   }
 </script>

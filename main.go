@@ -339,7 +339,6 @@ func (instance *instance) monitorFolder(postDelayReset bool, all *allInstances) 
 			default:
 				log.Panic("StartupPostDelay value must be \"random\", \"full\", or \"none\". Check your offpost.json.")
 			}
-			guiSend <- ""
 		} else { // use the saved NextPostTime
 			fmt.Println(instance.Name + ": Using scheduled post time.")
 			timeUntilNextPost := time.Until(time.UnixMilli(instance.NextPostTime))
@@ -347,6 +346,7 @@ func (instance *instance) monitorFolder(postDelayReset bool, all *allInstances) 
 			postTimerCheck = time.NewTimer(timeUntilNextPost)
 		}
 
+		guiSend <- ""
 		all.readySend <- 0
 
 		for !timeToExit {
@@ -472,10 +472,17 @@ func (instance *instance) monitorFolder(postDelayReset bool, all *allInstances) 
 	}()
 
 	// send to exit chan to close watcher goroutine
-	exitChan <- <-instance.restartMonitoring
-	fmt.Println(instance.Name + ": refreshing folder monitoring")
+	why := <-instance.restartMonitoring
 
+	queueTimer.Stop()
 	queueTimer.Reset(0 * time.Second)
+
+	exitChan <- why
+	if why == 0 {
+		fmt.Println(instance.Name + ": refreshing folder monitoring.")
+	} else {
+		fmt.Println(instance.Name + ": deleting.\n")
+	}
 }
 
 func main() {

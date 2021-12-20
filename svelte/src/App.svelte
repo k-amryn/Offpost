@@ -19,16 +19,20 @@
   }
 
   // each message sent over the server socket has an identifier at the beginning
-  // of the string in the form of "[letter], "
+  // of the string in the form of "[letter] "
   // Those identifiers:
-  // "s, " --> save settings, the message contains the json instance config
+  // "s " --> save settings, the message contains the json instance config
+  // "d " --> delete instance, message contains the index to delete
   function sendSocket(msg: string) {
-    switch (msg.slice(0,3)) {
-      case "s, ":
-        let dataBlob: string = msg.slice(3)
+    switch (msg.slice(0, msg.search(" "))) {
+      case "d":
+        serversocket.send(msg)
+        break
+      case "s":
+        let dataBlob: string = msg.slice(2)
         let converted: string = JSON.stringify(fromGInst(JSON.parse(dataBlob)))
         // add the "s, " back so Go can identify the message
-        serversocket.send("s, " + converted)
+        serversocket.send("s " + converted)
         break;
     
       default:
