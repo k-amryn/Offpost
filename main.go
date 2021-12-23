@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
-	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -36,6 +35,7 @@ type instance struct {
 type allInstances struct {
 	c         []*instance
 	readySend chan int
+	authComm  chan string
 	mu        sync.Mutex
 }
 
@@ -540,17 +540,7 @@ offpost.json settings loaded.
 	// saving at this point to save rescheduled post times
 	instances.saveSettings(false, instances.c)
 
-	// -----------------------------------------
-	// this websocket serves instance config whenever something is posted or queued
-	http.HandleFunc("/config", instances.createWebSocket)
-
-	// createLocalhost()
-	http.Handle("/", http.FileServer(http.Dir("./svelte/public")))
-	userdata := http.FileServer(http.Dir("./userdata"))
-	http.Handle("/userdata/", http.StripPrefix("/userdata", userdata))
-	if err := http.ListenAndServe(":8081", nil); err != nil {
-		log.Fatal(err)
-	}
+	go instances.handleWebServer()
 
 	// <-stayOpen makes the program stay open since no value is sent to the channel
 	stayOpen := make(chan int)

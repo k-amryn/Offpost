@@ -49,7 +49,7 @@ func onReady() {
 		for {
 			select {
 			case <-mURL.ClickedCh:
-				open("http://localhost:8081/")
+				open("http://localhost:148592/")
 			case <-mQuit.ClickedCh:
 				log.Panic("User clicked quit button.")
 			}
@@ -64,8 +64,40 @@ func onExit() {
 
 // --------------------------- end tray functions ------------------------------
 
+// ---------- connect web server ----------
+func (instances *allInstances) handleWebServer() {
+	http.HandleFunc("/config", instances.createWebSocket)
+	http.HandleFunc("/authdata", instances.createWebSocket)
+
+	// if requested file exists then return it; otherwise return /index.html
+	fs := http.FileServer(http.Dir("./svelte/public"))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			fullPath := "./svelte/public" + r.URL.Path
+			_, err := os.Stat(fullPath)
+			if err != nil {
+				if !os.IsNotExist(err) {
+					log.Panic(err)
+				}
+				r.URL.Path = "/"
+			}
+		}
+		fs.ServeHTTP(w, r)
+	})
+
+	userdata := http.FileServer(http.Dir("./userdata"))
+	http.Handle("/userdata/", http.StripPrefix("/userdata", userdata))
+
+	if err := http.ListenAndServe(":14859", nil); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// --------------------------------------
+
 // -------------------------- svelte gui functions -----------------------------
 func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Request) {
+	url := r.URL.String()
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -78,24 +110,28 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 	instances.mu.Unlock()
 	fmt.Print("GUI opening\n\n")
 
-	wsSend <- ""
-
-	// sends to the GUI, when wsSend is fed a string
-	go func() {
-		for {
-			select {
-			case <-wsSend:
-				err := conn.WriteJSON(instances.c)
-				if err != nil {
-					fmt.Println(err)
+	if url == "/authdata" {
+		info := <-instances.authComm
+		_ = conn.WriteMessage(1, []byte(info))
+	} else {
+		wsSend <- ""
+		// sends to the GUI, when wsSend is fed a string
+		go func() {
+			for {
+				select {
+				case <-wsSend:
+					err := conn.WriteJSON(instances.c)
+					if err != nil {
+						fmt.Println(err)
+					}
+				case <-clientClosed:
+					// exit writer function when ReadMessage says client is closed
+					return
 				}
-			case <-clientClosed:
-				// exit writer function when ReadMessage says client is closed
-				return
-			}
 
-		}
-	}()
+			}
+		}()
+	}
 
 	// reads from the GUI
 	for {
@@ -114,19 +150,27 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 		// characters in the string
 		msg := string(p)
 
-		switch msg[:strings.Index(msg, " ")] {
-		case "s":
-			var data []*instance
-			json.Unmarshal(p[2:], &data)
-			instances.saveSettings(true, data)
-		case "d":
-			i, err := strconv.Atoi(msg[2:])
-			if err != nil {
-				log.Panic(err, "Delete instance error")
+		if url == "/authdata" {
+			instances.authComm <- msg
+			return
+		} else {
+			switch msg[:strings.Index(msg, " ")] {
+			case "s":
+				var data []*instance
+				json.Unmarshal(p[2:], &data)
+				instances.saveSettings(true, data)
+			case "d":
+				i, err := strconv.Atoi(msg[2:])
+				if err != nil {
+					log.Panic(err, "Delete instance error")
+				}
+				instances.deleteInst(i)
+			case "twitter":
+				i, _ := strconv.Atoi(msg[strings.Index(msg, " ")+1:])
+				instances.connectTwitter(i)
+			default:
+				fmt.Println("Invalid socket message received.")
 			}
-			instances.deleteInst(i)
-		default:
-			fmt.Println("Invalid socket message received.")
 		}
 	}
 }

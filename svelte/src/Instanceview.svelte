@@ -59,11 +59,11 @@
     }
   }
 
-  function configurePlatform() {
+  function configurePlatform(platform: string) {
     if ($unsavedChanges) {
       dispatchAlert("Save changes before configuring a platform.")
     } else {
-
+      dispatchDialogue(platform, $activeInstance)
     }
   }
 
@@ -342,7 +342,7 @@
                 <option value="facebook">Facebook</option>
                 <option value="tumblr">Tumblr</option>
               </select>
-              <button on:click={() => configurePlatform()}>Configure</button>
+              <button on:click={() => configurePlatform(platform)}>Configure</button>
               <div class="svg-holder status-indicator">
                 <svg width="12px" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
                   <g transform="matrix(1,0,0,1,-1223.59,-1560.19)">

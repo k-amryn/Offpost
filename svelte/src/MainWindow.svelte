@@ -2,6 +2,7 @@
   import Sidebar from './Sidebar.svelte'
   import Homeview from './Homeview.svelte'
   import Instanceview from './Instanceview.svelte'
+  import TwitterConfig from './TwitterConfig.svelte'
   import { activeInstance, ginstances, unsavedChanges } from './stores'
 
   // relay alert messages from sub-components to App component
@@ -99,17 +100,29 @@
       <div id="dialogue-inner" on:click={e => e.stopPropagation()}>
         {#if dialogueType === "delete"}
 
-        <div id="delete-content">
-          <div>
-            <p>Delete {$ginstances[instIndex].Name}?</p>
-            <p>This will remove its post history and platform connections.</p>
+          <div id="delete-content">
+            <div>
+              <p>Delete {$ginstances[instIndex].Name}?</p>
+              <p>This will remove its post history and platform connections.</p>
+            </div>
+            <div class="button-group">
+              <button on:click={() => deleteInstance(instIndex)}>Yes</button>
+              <button on:click={() => {dialogueActive = false}}>No</button>
+            </div>
           </div>
-          <div class="button-group">
-            <button on:click={() => deleteInstance(instIndex)}>Yes</button>
-            <button on:click={() => {dialogueActive = false}}>No</button>
-          </div>
+
+        {:else if dialogueType === "twitter"}
+
+          <TwitterConfig instance={instIndex} 
+            on:socketMessage={e => dispatchSocketMessage(e.detail.text)}
+          />
+
+        {:else}
+
+        <div>
+          we dont have a dialogue setup for this yet.
         </div>
-        
+
         {/if}
       </div>
     </div>
