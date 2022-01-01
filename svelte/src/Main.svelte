@@ -101,20 +101,41 @@
       e.QueueDelay = separateTimeUnit(e.QueueDelay)
       e.PostDelay = separateTimeUnit(e.PostDelay)
       e.StartupPostDelay = e.StartupPostDelay
-      e.Platforms = e.Platforms
+      // give the UI only the userID of the platform
+      e.Platforms = getPlatformUserID(e.Platforms)
       e.Caption = e.Caption
       e.ItemsInQueue = e.ItemsInQueue
       e.NextPostTime = dateFromUnixTime(e.NextPostTime)
       e.Status = e.Status
 
-      let r = await fetch("./testinguserdata/" + e.Name + ".webp")
+      let r = await fetch("./userdata/" + e.Name + ".webp")
       if (r.status === 404) {
         e.Image = "./new_instance.svg"
       } else {
-        e.Image = "./testinguserdata/" + e.Name + ".webp"
+        e.Image = "./userdata/" + e.Name + ".webp"
       }
     }
     return data
+  }
+
+  function getPlatformUserID(platforms: object): object {
+    var resultPlatforms = new Map()
+    Object.keys(platforms).forEach(e => {
+      resultPlatforms.set(e, platforms[e].split("***").slice(-1)[0])
+      
+      if (resultPlatforms.get(e) != "no" && resultPlatforms.get(e) != "no-config") {
+        switch (e) {
+          case "facebook":
+            break
+          case "twitter":
+            resultPlatforms.set(e, "https://twitter.com/i/user/" + resultPlatforms.get(e))
+            break
+
+        }
+      }
+    })
+    console.log(Object.fromEntries(resultPlatforms))
+    return Object.fromEntries(resultPlatforms)
   }
 
   function fromGInst(data: any[]): any[] {

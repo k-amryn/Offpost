@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 func pkce() (string, string) {
@@ -22,11 +23,11 @@ func pkce() (string, string) {
 }
 
 func (instances *allInstances) connectTwitter(i int) {
-	twURL := "https://twitter.com/i/oauth2/authorize"
-	twURL += "?response_type=code"
-	twURL += "&client_id=RWJhQ1NGNGVNTEFYRGd1UUhYaXk6MTpjaQ"
-	twURL += "&redirect_uri=http://localhost:14859/auth"
-	twURL += "&scope=tweet.write%20tweet.read%20users.read%20offline.access"
+	twURL := "https://twitter.com/i/oauth2/authorize" +
+		"?response_type=code" +
+		"&client_id=RWJhQ1NGNGVNTEFYRGd1UUhYaXk6MTpjaQ" +
+		"&redirect_uri=http://localhost:14859/auth" +
+		"&scope=tweet.write%20tweet.read%20users.read%20offline.access"
 
 	_, state := pkce()
 	twURL += "&state=" + state
@@ -34,6 +35,8 @@ func (instances *allInstances) connectTwitter(i int) {
 	ch, ver := pkce()
 	twURL += "&code_challenge=" + ch
 	twURL += "&code_challenge_method=s256"
+	fmt.Println(twURL)
+	time.Sleep(time.Second)
 	open(twURL)
 
 	instances.mu.Lock()
@@ -62,13 +65,35 @@ func (instances *allInstances) connectTwitter(i int) {
 
 	var uBody map[string]string
 	json.Unmarshal(body, &uBody)
-
 	access := uBody["access_token"]
 	refresh := uBody["refresh_token"]
 
-	instances.c[i].Platforms["twitter"] = access + "***" + refresh
+	instances.c[i].Platforms["twitter"] = access + "***" + refresh + "***" + getTwitterID(access)
 	instances.saveSettings(false, instances.c)
 
 	fmt.Println(instances.c[i].Name + ": Connected to twitter.\n")
+
+	wsSend <- ""
+
 	close(instances.authComm)
+}
+
+func getTwitterID(access string) string {
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", "https://api.twitter.com/2/users/me", nil)
+	req.Header.Add("Authorization", "Bearer "+access)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Panic(err)
+	}
+	var uBody2 map[string]map[string]string
+	json.Unmarshal(body, &uBody2)
+
+	return uBody2["data"]["id"]
 }

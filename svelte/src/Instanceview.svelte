@@ -1,8 +1,14 @@
 <script lang="typescript">
+  import { createEventDispatcher, onDestroy } from 'svelte'
   import { ginstances, ginstancesOld, activeInstance, unsavedChanges } from './stores'
 
+  // Copies config, restores copy when user Cancels changes. Don't copy for
+  // newly created instances, because "canceling" should delete new instance
+  if ($ginstances[$activeInstance].Status != "new-instance") {
+    $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
+  }
+
   // alert about unsaved changes when user clicks "Configure"
-  import { createEventDispatcher } from 'svelte'
   const dispatch = createEventDispatcher()
   function dispatchAlert(msg: string) {
     dispatch('alert', {
@@ -23,14 +29,40 @@
     })
   }
 
-  // Copies config, restores copy when user Cancels changes. Don't copy for
-  // newly created instances, because "canceling" should delete new instance
-  if ($ginstances[$activeInstance].Status != "new-instance") {
-    $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
+  let advanced: boolean = false
+  
+  $: instance = $ginstances[$activeInstance]
+  let platforms: string[] = new Array()
+  const unsub = activeInstance.subscribe(() => {
+    resetPlatforms()
+  })
+  onDestroy(unsub)
+
+  function resetPlatforms() {
+    if ($activeInstance == -1) return
+    platforms = Object.keys($ginstances[$activeInstance].Platforms)
+    if (platforms.length == 0) {
+      platforms.push("")
+    }
+    platforms = platforms
   }
 
-  let advanced: boolean = false
-  $: instance = $ginstances[$activeInstance]
+  function newPlatform() {
+    platforms.push("")
+    platforms = platforms
+    $unsavedChanges = true
+  }
+
+  function removePlatform(i: number) {
+    $unsavedChanges = true
+    if (i == 0) {
+      platforms[i] = ""
+      platforms = platforms
+    } else {
+      platforms.splice(i, 1)
+      platforms = platforms
+    }
+  }
 
   function addFolder() {
     $unsavedChanges = true
@@ -88,6 +120,21 @@
   }
 
   function saveInstanceSettings() {
+    Object.keys(instance.Platforms).forEach(e => {
+      if (!platforms.includes(e)) {
+        delete instance.Platforms[e]
+      }
+    })
+    platforms.forEach((e, i) => {
+      if (instance.Platforms[e] == undefined && e != "") {
+        instance.Platforms[e] = "no-config"
+      }
+      if (e == "" && platforms.length != 1) {
+        removePlatform(i)
+      }
+    })
+    resetPlatforms()
+
     $unsavedChanges = false
     $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
     dispatchSocketMessage("s " + JSON.stringify($ginstances))
@@ -99,6 +146,7 @@
       $activeInstance = $ginstances.length - 2
     } 
     $ginstances = JSON.parse(JSON.stringify($ginstancesOld))
+    resetPlatforms()
   }
 
   function confirmDelete() {
@@ -186,9 +234,7 @@
   }
 
   .platform-row {
-    display: grid;
-    grid-template-columns: repeat(4, auto);
-    width: fit-content;
+    display: flex;
     grid-gap: 10px;
   }
 
@@ -296,6 +342,14 @@
 	span.needs-configuring {
 		color: var(--orange);
 	}
+
+  .status-indicator:not(.not-configured) svg {
+    fill: var(--green);
+  }
+
+  .status-indicator.not-configured svg {
+    fill: var(--orange);
+  }
 </style>
 
 <div id="container">
@@ -335,45 +389,61 @@
       <div class="setting-label">Platforms:</div>
       <div class="setting-content">
         <div id="platform-rows">
-          {#each Object.keys(instance.Platforms) as platform}
+          {#each platforms as platform, i}
             <div class="platform-row">
-              <select value={platform} on:change={() => $unsavedChanges = true}>
+              <select bind:value={platform} on:change={() => $unsavedChanges = true}>
+                <option value="">Select Platform</option>
                 <option value="twitter">Twitter</option>
                 <option value="facebook">Facebook</option>
                 <option value="tumblr">Tumblr</option>
               </select>
-              <button on:click={() => configurePlatform(platform)}>Configure</button>
-              <div class="svg-holder status-indicator">
-                <svg width="12px" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
-                  <g transform="matrix(1,0,0,1,-1223.59,-1560.19)">
-                  <g transform="matrix(1,0,0,1,0,1101.51)">
-                  <g transform="matrix(0.521739,0,0,0.521739,591.235,-354.719)">
-                  <circle cx="1225.71" cy="1572.7" r="13.69" style="fill:rgb(65,147,62);"/>
-                  </g>
-                  </g>
-                  </g>
-                </svg>
-              </div>
-              <div class="svg-holder">
-                <svg width="14px" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
-                  <g transform="matrix(1,0,0,1,-1254.39,-1559.84)">
-                  <g transform="matrix(1,0,0,1,0,1101.51)">
-                  <g transform="matrix(1,0,0,1,22.3939,-5.68736)">
-                  <g transform="matrix(6,0,0,6,-6195,-9118.05)">
-                  <path d="M1239,1597.34L1238.34,1597.34C1238.15,1597.34 1238,1597.49 1238,1597.68L1238,1599.01C1238,1599.19 1238.15,1599.34 1238.33,1599.34L1239.67,1599.34C1239.85,1599.34 1240,1599.19 1240,1599.01C1240,1598.72 1240,1598.34 1240,1598.34" style="fill:none;stroke:black;stroke-width:0.33px;"/>
-                  </g>
-                  <g transform="matrix(1,0,0,1,0,-1126.34)">
-                  <path d="M1239,1598.34L1245.98,1591.36L1242,1591.36L1245.98,1591.36L1245.98,1595.34" style="fill:none;stroke:black;stroke-width:2px;"/>
-                  </g>
-                  </g>
-                  </g>
-                  </g>
-                </svg>
-              </div> 
+              {#if (platform != "" && instance.Platforms[platform] != undefined)}
+                <button on:click={() => configurePlatform(platform)}>Configure</button>
+                <div class:not-configured="{instance.Platforms[platform] == "no-config"}" class="svg-holder status-indicator">
+                  <svg width="12px" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
+                    <g transform="matrix(1,0,0,1,-1223.59,-1560.19)">
+                    <g transform="matrix(1,0,0,1,0,1101.51)">
+                    <g transform="matrix(0.521739,0,0,0.521739,591.235,-354.719)">
+                    <circle cx="1225.71" cy="1572.7" r="13.69" />
+                    </g>
+                    </g>
+                    </g>
+                  </svg>
+                </div>
+                {#if (instance.Platforms[platform] != undefined && instance.Platforms[platform] != "no-config")}
+                  <div on:click={() => window.open(instance.Platforms[platform])} class="svg-holder">
+                    <svg width="14px" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
+                      <g transform="matrix(1,0,0,1,-1254.39,-1559.84)">
+                      <g transform="matrix(1,0,0,1,0,1101.51)">
+                      <g transform="matrix(1,0,0,1,22.3939,-5.68736)">
+                      <g transform="matrix(6,0,0,6,-6195,-9118.05)">
+                      <path d="M1239,1597.34L1238.34,1597.34C1238.15,1597.34 1238,1597.49 1238,1597.68L1238,1599.01C1238,1599.19 1238.15,1599.34 1238.33,1599.34L1239.67,1599.34C1239.85,1599.34 1240,1599.19 1240,1599.01C1240,1598.72 1240,1598.34 1240,1598.34" style="fill:none;stroke:black;stroke-width:0.33px;"/>
+                      </g>
+                      <g transform="matrix(1,0,0,1,0,-1126.34)">
+                      <path d="M1239,1598.34L1245.98,1591.36L1242,1591.36L1245.98,1591.36L1245.98,1595.34" style="fill:none;stroke:black;stroke-width:2px;"/>
+                      </g>
+                      </g>
+                      </g>
+                      </g>
+                    </svg>
+                  </div>
+                {/if}
+              {/if}
+              {#if (i == 0 && (platform != "" && (instance.Platforms[platform] == "no-config" || instance.Platforms[platform] == undefined))) ||
+                (i > 0 && (instance.Platforms[platform] == "no-config" || instance.Platforms[platform] == undefined))}
+                <div class="svg-holder" on:click={() => removePlatform(i)}>
+                  <svg width="12px" version="1.1" viewBox="0 0 5.4152 5.4152" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(-322.81 -103.89)" fill="none" stroke="#de3e39" stroke-linecap="round">
+                    <path d="m323.31 104.39 4.4152 4.4152"/>
+                    <path d="m327.73 104.39-4.4152 4.4152"/>
+                    </g>
+                  </svg>
+                </div>
+              {/if}
             </div>
           {/each}
         </div>
-        <span class="subtext">Add new platform</span>
+        <span on:click={() => newPlatform()} class="subtext">Add new platform</span>
       </div>
     </div>
 

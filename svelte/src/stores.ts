@@ -7,7 +7,7 @@ type ginstance = {
   QueueDelay: {num: number, unit: string};
   PostDelay: {num: number, unit: string};
   StartupPostDelay: string;
-  Platforms: {facebook:string, twitter: string}; 
+  Platforms: {}; 
   Caption: string;
   ItemsInQueue: number;
   NextPostTime: string;

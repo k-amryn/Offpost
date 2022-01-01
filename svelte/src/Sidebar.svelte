@@ -48,10 +48,7 @@
         QueueDelay: {num: 30, unit: "seconds"},
         PostDelay: {num: 5, unit: "hours"},
         StartupPostDelay: "random",
-        Platforms: {
-            facebook: "haha",
-            twitter: "haha"
-        },
+        Platforms: {},
         Caption: "",
         ItemsInQueue: 0,
         NextPostTime: "",

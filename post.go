@@ -33,7 +33,6 @@ func (instance *instance) makePost() {
 	}
 
 	newlineIndex := strings.Index(string(data), "\n")
-
 	firstLine := string(data[:newlineIndex])
 	theQueue := strings.Split(firstLine, "***")
 
@@ -42,20 +41,6 @@ func (instance *instance) makePost() {
 
 	instance.appendTxtFile([][]string{{firstLine}}, "posted")
 
-	postLinks := make(map[string]string)
-
-	// perform the tweet
-	postLinks["twitter"] = postTweet(theQueue, "", instance.Platforms["twitter"])
-	// postLinks["twitter"] = "https://tweetlink/"
-	postLinks["facebook"] = postFacebook(theQueue, "", instance.Platforms["facebook"])
-	// postLinks["facebook"] = "https://facebooklink/"
-
-	for key := range postLinks {
-		// if the user disabled the platform
-		if postLinks[key] == "no" {
-			delete(postLinks, key)
-		}
-	}
 	fmt.Print(instance.Name + " is posting: [")
 	for i := range theQueue {
 		if i == len(theQueue)-1 {
@@ -63,6 +48,29 @@ func (instance *instance) makePost() {
 		} else {
 			fmt.Print(filepath.Base(theQueue[i]) + "; ")
 		}
+	}
+
+	postLinks := make(map[string]string)
+
+	if len(instance.Platforms) != 0 {
+		for key := range instance.Platforms {
+			if instance.Platforms[key] == "no-config" {
+				fmt.Println(instance.Name + ": no " + key + " config")
+				continue
+			}
+			switch key {
+			case "twitter":
+				// postLinks["twitter"] = postTweet(theQueue, "", instance.Platforms["twitter"])
+				postLinks["twitter"] = "https://tweetlink/"
+			case "facebook":
+				// postLinks["facebook"] = postFacebook(theQueue, "", instance.Platforms["facebook"])
+				postLinks["facebook"] = "https://facebooklink/"
+			default:
+				fmt.Println(instance.Name + ": " + key + " is an invalid platform")
+			}
+		}
+	} else {
+		fmt.Println(instance.Name + ": no post platforms connected")
 	}
 
 	for key := range postLinks {

@@ -111,8 +111,13 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 	fmt.Print("GUI opening\n\n")
 
 	if url == "/authdata" {
-		info := <-instances.authComm
-		_ = conn.WriteMessage(1, []byte(info))
+		select {
+		case info := <-instances.authComm:
+			_ = conn.WriteMessage(1, []byte(info))
+		case <-clientClosed:
+			return
+		}
+
 	} else {
 		wsSend <- ""
 		// sends to the GUI, when wsSend is fed a string
@@ -209,6 +214,7 @@ func (instances *allInstances) saveSettings(fromGui bool, new []*instance) {
 				instances.c[i].Caption = new[i].Caption
 				instances.c[i].StartupPostDelay = new[i].StartupPostDelay
 				new[i].NextPostTime = instances.c[i].NextPostTime
+				instances.c[i].Platforms = new[i].Platforms
 
 				postDelayReset := false
 				needsRestart := false
