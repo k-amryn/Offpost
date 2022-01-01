@@ -12,7 +12,7 @@
       value: value
     })
   }
-  
+
   function handleWindowEvent(e) {
     if (!e.target.classList.contains('select')) {
       open = false
@@ -38,17 +38,14 @@
     background-size: 10px;
     background-position: calc(100% - 5px) center;
     background-repeat: no-repeat;
-    padding-right: 25px;
-    height: 36px;
-
-    font-family: inherit;
-    font-size: inherit;
-    box-sizing: border-box;
-    border: 2px solid black;
-    padding: 6px 20px 0px 8px;
-    border-radius: 5px;
-    margin: 0;
 	  cursor: pointer;
+    border: 2px solid black;
+    height: 36px;
+    box-sizing: border-box;
+    padding: 0px 20px 0px 8px;
+    border-radius: 5px;
+    display: grid;
+    align-items: center;
   }
 
   #dropdown {
@@ -74,6 +71,7 @@
     padding: 0px 3px 0px 3px;
     display: grid;
     align-items: center;
+    cursor: default;
   }
 
   .value:hover {
