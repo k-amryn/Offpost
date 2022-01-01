@@ -166,7 +166,7 @@
   }
 
   #settings {
-    padding: 20px;
+    padding: 20px 20px 35px 20px;
     overflow: auto;
   }
 
