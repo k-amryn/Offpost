@@ -1,6 +1,7 @@
 <script lang="typescript">
   import { createEventDispatcher, onDestroy } from 'svelte'
   import { ginstances, ginstancesOld, activeInstance, unsavedChanges } from './stores'
+  import Select from './Select.svelte'
 
   // Copies config, restores copy when user Cancels changes. Don't copy for
   // newly created instances, because "canceling" should delete new instance
@@ -391,12 +392,8 @@
         <div id="platform-rows">
           {#each platforms as platform, i}
             <div class="platform-row">
-              <select bind:value={platform} on:change={() => $unsavedChanges = true}>
-                <option value="">Select Platform</option>
-                <option value="twitter">Twitter</option>
-                <option value="facebook">Facebook</option>
-                <option value="tumblr">Tumblr</option>
-              </select>
+              <Select bind:value={platform} on:change={() => $unsavedChanges=true} width={"155px"} 
+                values={{"": "Select Platform","twitter": "Twitter","facebook": "Facebook","tumblr": "Tumblr"}} />
               {#if (platform != "" && instance.Platforms[platform] != undefined)}
                 <button on:click={() => configurePlatform(platform)}>Configure</button>
                 <div class:not-configured="{instance.Platforms[platform] == "no-config"}" class="svg-holder status-indicator">
@@ -480,11 +477,9 @@
             </svg>
           </div>
         </div>
-        <select on:change={() => $unsavedChanges = true} bind:value={ instance.PostDelay.unit }>
-          <option>minutes</option>
-          <option>hours</option>
-          <option>days</option>
-        </select>
+        <Select on:change={() => $unsavedChanges = true} bind:value={ instance.PostDelay.unit } width={"100px"}
+          values={{"minutes": "minutes", "hours": "hours", "days": "days"}}
+        />
       </div>
     </div>
 
@@ -523,23 +518,18 @@
               </svg>
             </div>
           </div>
-          <select on:change={() => $unsavedChanges = true} bind:value={ instance.QueueDelay.unit }>
-            <option>seconds</option>
-            <option>minutes</option>
-          </select>
+          <Select on:change={() => $unsavedChanges = true} bind:value={ instance.QueueDelay.unit } width="100px"
+            values={{"seconds": "seconds", "minutes": "minutes"}}/>
         </div>
       </div>
 
       <div class="setting-section">
         <div class="setting-label">Startup Delay:</div>
         <div class="setting-content">
-          <select on:change={() => $unsavedChanges = true} bind:value={ instance.StartupPostDelay }>
-            <!-- On startup, attempt posting at the NextPostTime. If the NextPostTime has passed, 
-            then use this option. -->
-            <option value="random">Random</option>
-            <option value="full">Full</option>
-            <option value="none">None</option>
-          </select>
+          <!-- On startup, attempt posting at the NextPostTime. If the NextPostTime has passed, 
+          then use this option. -->
+          <Select on:change={() => $unsavedChanges = true} bind:value={ instance.StartupPostDelay } width={"100px"}
+            values={{ "random": "Random", "full": "Full", "none": "None" }} />
         </div>
       </div>
 
