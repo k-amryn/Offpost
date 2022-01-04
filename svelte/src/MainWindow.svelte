@@ -20,7 +20,7 @@
     })
   }
 
-  var dialogueActive: boolean = false
+  export var dialogueActive: boolean = false
   var dialogueType: string
   var instIndex: number = 0
   function showDialogue(type: string, instance: number) {
@@ -73,13 +73,13 @@
     background: white;
     border-radius: 10px;
     border: var(--main-border-size);
-    padding: 20px;
     box-sizing: border-box;
     z-index: 10;
   }
   #delete-content {
     display: grid;
     grid-template-rows: auto 30px;
+    padding: 20px;
     width: 300px;
     height: 150px;
   }
@@ -99,7 +99,6 @@
     <div id="dialogue" on:click={() => {dialogueActive = false}}>
       <div id="dialogue-inner" on:click={e => e.stopPropagation()}>
         {#if dialogueType === "delete"}
-
           <div id="delete-content">
             <div>
               <p>Delete {$ginstances[instIndex].Name}?</p>
@@ -110,19 +109,14 @@
               <button on:click={() => {dialogueActive = false}}>No</button>
             </div>
           </div>
-
         {:else if dialogueType === "twitter"}
-
           <TwitterConfig instance={instIndex} 
             on:socketMessage={e => dispatchSocketMessage(e.detail.text)}
           />
-
         {:else}
-
-        <div>
-          we dont have a dialogue setup for this yet.
-        </div>
-
+          <div>
+            we dont have a dialogue setup for this yet.
+          </div>
         {/if}
       </div>
     </div>

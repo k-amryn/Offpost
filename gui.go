@@ -173,6 +173,9 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 			case "twitter":
 				i, _ := strconv.Atoi(msg[strings.Index(msg, " ")+1:])
 				instances.connectTwitter(i)
+			case "twitter,r":
+				i, _ := strconv.Atoi(msg[strings.Index(msg, " ")+1:])
+				fmt.Println(instances.c[i].Name, "DELETING TWITTER")
 			default:
 				fmt.Println("Invalid socket message received.")
 			}
@@ -214,7 +217,24 @@ func (instances *allInstances) saveSettings(fromGui bool, new []*instance) {
 				instances.c[i].Caption = new[i].Caption
 				instances.c[i].StartupPostDelay = new[i].StartupPostDelay
 				new[i].NextPostTime = instances.c[i].NextPostTime
-				instances.c[i].Platforms = new[i].Platforms
+
+				// retain keys when saving from GUI
+				for key := range new[i].Platforms {
+					if new[i].Platforms[key][:4] == "http" {
+						new[i].Platforms[key] = instances.c[i].Platforms[key]
+					} else {
+						instances.c[i].Platforms[key] = new[i].Platforms[key]
+					}
+				}
+
+				// delete keys from backend when disconnected from frontend
+				for key := range instances.c[i].Platforms {
+					_, exists := new[i].Platforms[key]
+					if !exists {
+						fmt.Println(instances.c[i].Name+": deleting", key)
+						delete(instances.c[i].Platforms, key)
+					}
+				}
 
 				postDelayReset := false
 				needsRestart := false

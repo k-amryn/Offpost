@@ -1,6 +1,6 @@
 <script lang="typescript">
 	import MainWindow from './MainWindow.svelte'
-	import { ginstances, ginstancesOld } from './stores'
+	import { activeInstance, ginstances, ginstancesOld } from './stores'
 
   // this block is used for frontend testing with 'npm run dev', no backend
   // fetch("test_offpost.json")
@@ -17,14 +17,27 @@
     $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
   }
 
+  let dialogueActive: boolean = false
+
   // each message sent over the server socket has an identifier at the beginning
-  // of the string in the form of "[letter] "
+  // of the string in the form of "[idenfifier] "
   // Those identifiers:
   // "s " --> save settings, the message contains the json instance config
   // "d " --> delete instance, message contains the index to delete
-  // "twitter " --> configure twitter, message containts index to 
+  // "twitter " --> configure twitter, message containts index to configure
+  // "twitter,r " --> disconnect twitter, message contains index to disconnect
   function sendSocket(msg: string) {
     switch (msg.slice(0, msg.search(" "))) {
+      case "twitter,r":
+        let i: number = +msg.slice(10)
+        delete $ginstances[i].Platforms["twitter"]
+        $activeInstance = i-1
+        $activeInstance = i
+        dialogueActive = false
+
+        $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
+        sendSocket("s " + JSON.stringify($ginstances))
+        break
       case "twitter":
       case "d":
         serversocket.send(msg)
@@ -134,7 +147,6 @@
         }
       }
     })
-    console.log(Object.fromEntries(resultPlatforms))
     return Object.fromEntries(resultPlatforms)
   }
 
@@ -168,8 +180,6 @@
       }, 3000);
     }
   }
-
-
 </script>
 
 <style>
@@ -224,7 +234,8 @@
        <span> {alertText} </span>
     </div>
 	</div>
-	<MainWindow 
+	<MainWindow
+    bind:dialogueActive={dialogueActive}
     on:alert={showAlert}
     on:socketMessage={m => sendSocket(m.detail.text)}
   />
