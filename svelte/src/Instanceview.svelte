@@ -351,6 +351,13 @@
   .status-indicator.not-configured svg {
     fill: var(--orange);
   }
+
+  .disabled {
+    background: rgba(0,0,0,0.1);
+    color: rgba(0,0,0,0.5);
+    border-color: rgba(0,0,0,0.5);
+    cursor: default;
+  }
 </style>
 
 <div id="container">
@@ -394,9 +401,9 @@
             <div class="platform-row">
               <Select bind:value={platform} on:change={() => $unsavedChanges=true} width={"155px"} 
                 values={{"": "Select Platform","twitter": "Twitter","facebook": "Facebook","tumblr": "Tumblr"}} />
-              {#if (platform != "" && instance.Platforms[platform] != undefined)}
-                <button on:click={() => configurePlatform(platform)}>Configure</button>
-                <div class:not-configured="{instance.Platforms[platform] == "no-config"}" class="svg-holder status-indicator">
+              {#if platform != ""}
+                <button class:disabled="{$unsavedChanges}" on:click={() => configurePlatform(platform)} class="configure-button">Configure</button>
+                <div class:not-configured="{(instance.Platforms[platform] == "no-config" || instance.Platforms[platform] == undefined)}" class="svg-holder status-indicator">
                   <svg width="12px" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
                     <g transform="matrix(1,0,0,1,-1223.59,-1560.19)">
                     <g transform="matrix(1,0,0,1,0,1101.51)">
