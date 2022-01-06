@@ -45,10 +45,17 @@ func (instances *allInstances) connectTwitter(i int) {
 
 	instances.authComm <- "Twitter " + instances.c[i].Name
 	info, _ := url.Parse(<-instances.authComm)
-	code := info.Query()["code"][0]
+
+	values := info.Query()
+	_, denied := values["error"]
+	if denied {
+		fmt.Println(instances.c[i].Name + ": Twitter connection denied.\n")
+		close(instances.authComm)
+		return
+	}
 
 	resp, err := http.PostForm("https://api.twitter.com/2/oauth2/token?", url.Values{
-		"code":          {code},
+		"code":          {values["code"][0]},
 		"grant_type":    {"authorization_code"},
 		"client_id":     {"RWJhQ1NGNGVNTEFYRGd1UUhYaXk6MTpjaQ"},
 		"redirect_uri":  {"http://localhost:14859/auth"},

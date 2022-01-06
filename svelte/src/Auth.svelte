@@ -3,6 +3,7 @@
   
   var platform: string
   var instName: string
+  var connected: boolean
   serversocket.onopen = () => {
     serversocket.send(window.location.search)
   }
@@ -12,6 +13,12 @@
     let i = info.search(" ")
     platform = info.slice(0, i)
     instName = info.slice(i+1)
+     
+    if (window.location.search.slice(0,6) === "?error") {
+      connected = false
+    } else {
+      connected = true
+    }
     serversocket.close()
   }
 </script>
@@ -38,7 +45,6 @@
   #alert {
     width: 400px;
     height: 110px;
-    white-space: nowrap;
     overflow: hidden;
     border-radius: 10px;
     border: var(--main-border-size);
@@ -51,7 +57,11 @@
   <div id="info">
     <img id="logo" src="./logo.svg" alt="Offpost logo">
     <div id="alert">
+      {#if connected}
       <span>{instName}: Connected to {platform}.</span>
+      {:else}
+      <span>{instName}: {platform} connection cancelled.</span>
+      {/if}
     </div>
   </div>
 </div>

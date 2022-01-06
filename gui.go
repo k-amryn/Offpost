@@ -151,8 +151,7 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 			return
 		}
 
-		// this switch is used to identify the incoming message by the first 3
-		// characters in the string
+		// this switch is used to identify the incoming message by the first word in the string
 		msg := string(p)
 
 		if url == "/authdata" {
