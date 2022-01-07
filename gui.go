@@ -22,11 +22,12 @@ import (
 func open(url string) error {
 	var cmd string
 	var args []string
+	url = `"` + url + `"`
 
 	switch runtime.GOOS {
 	case "windows":
-		cmd = "cmd"
-		args = []string{"/c", "start"}
+		cmd = "powershell"
+		args = []string{"start"}
 	case "darwin":
 		cmd = "open"
 	default: // "linux", "freebsd", "openbsd", "netbsd"
