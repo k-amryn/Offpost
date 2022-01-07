@@ -50,7 +50,7 @@ func onReady() {
 		for {
 			select {
 			case <-mURL.ClickedCh:
-				open("http://localhost:148592/")
+				open("http://localhost:14859/")
 			case <-mQuit.ClickedCh:
 				log.Panic("User clicked quit button.")
 			}

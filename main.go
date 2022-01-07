@@ -526,7 +526,7 @@ offpost.json settings loaded.
 	go systray.Run(onReady, onExit)
 
 	fmt.Println("Initializing post queue and monitoring your folders.")
-	fmt.Println("GUI on http://localhost:8081/")
+	fmt.Println("GUI on http://localhost:14859/")
 	fmt.Println("-------------------------------------------------------------------")
 	fmt.Print("\n")
 
