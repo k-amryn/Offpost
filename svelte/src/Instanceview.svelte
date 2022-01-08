@@ -3,6 +3,15 @@
   import { ginstances, ginstancesOld, activeInstance, unsavedChanges } from './stores'
   import Select from './Select.svelte'
 
+  let advanced: boolean = false
+  
+  $: instance = $ginstances[$activeInstance]
+  let platforms: string[] = new Array()
+  const unsub = activeInstance.subscribe(() => {
+    resetPlatforms()
+  })
+  onDestroy(unsub)
+
   // Copies config, restores copy when user Cancels changes. Don't copy for
   // newly created instances, because "canceling" should delete new instance
   if ($ginstances[$activeInstance].Status != "new-instance") {
@@ -30,15 +39,6 @@
     })
   }
 
-  let advanced: boolean = false
-  
-  $: instance = $ginstances[$activeInstance]
-  let platforms: string[] = new Array()
-  const unsub = activeInstance.subscribe(() => {
-    resetPlatforms()
-  })
-  onDestroy(unsub)
-
   function resetPlatforms() {
     if ($activeInstance == -1) return
     platforms = Object.keys($ginstances[$activeInstance].Platforms)
@@ -62,6 +62,15 @@
     } else {
       platforms.splice(i, 1)
       platforms = platforms
+    }
+  }
+
+  function profileLink(platform: string): string {
+    switch (platform) {
+      case "twitter":
+        return "https://twitter.com/" + instance.Platforms["twitter"]
+      default:
+        break;
     }
   }
 
@@ -415,7 +424,7 @@
                   </svg>
                 </div>
                 {#if (instance.Platforms[platform] != undefined && instance.Platforms[platform] != "no-config")}
-                  <div on:click={() => window.open(instance.Platforms[platform])} class="svg-holder">
+                  <div on:click={() => window.open(profileLink(platform))} class="svg-holder">
                     <svg width="14px" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;" viewBox="0 0 15 15" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
                       <g transform="matrix(1,0,0,1,-1254.39,-1559.84)">
                       <g transform="matrix(1,0,0,1,0,1101.51)">

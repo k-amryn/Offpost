@@ -220,7 +220,7 @@ func (instances *allInstances) saveSettings(fromGui bool, new []*instance) {
 
 				// retain keys when saving from GUI
 				for key := range new[i].Platforms {
-					if new[i].Platforms[key][:4] == "http" {
+					if new[i].Platforms[key] != "no-config" {
 						new[i].Platforms[key] = instances.c[i].Platforms[key]
 					} else {
 						instances.c[i].Platforms[key] = new[i].Platforms[key]

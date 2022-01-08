@@ -115,7 +115,7 @@
       e.PostDelay = separateTimeUnit(e.PostDelay)
       e.StartupPostDelay = e.StartupPostDelay
       // give the UI only the userID of the platform
-      e.Platforms = getPlatformUserID(e.Platforms)
+      e.Platforms = getPlatformUsername(e.Platforms)
       e.Caption = e.Caption
       e.ItemsInQueue = e.ItemsInQueue
       e.NextPostTime = dateFromUnixTime(e.NextPostTime)
@@ -131,20 +131,11 @@
     return data
   }
 
-  function getPlatformUserID(platforms: object): object {
+  function getPlatformUsername(platforms: object): object {
     var resultPlatforms = new Map()
     Object.keys(platforms).forEach(e => {
-      resultPlatforms.set(e, platforms[e].split("***").slice(-1)[0])
-      
-      if (resultPlatforms.get(e) != "no" && resultPlatforms.get(e) != "no-config") {
-        switch (e) {
-          case "facebook":
-            break
-          case "twitter":
-            resultPlatforms.set(e, "https://twitter.com/i/user/" + resultPlatforms.get(e))
-            break
-
-        }
+      if (resultPlatforms.get(e) != "no-config") {
+        resultPlatforms.set(e, platforms[e].split("***").slice(-1)[0])
       }
     })
     return Object.fromEntries(resultPlatforms)

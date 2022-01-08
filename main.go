@@ -536,6 +536,7 @@ offpost.json settings loaded.
 		go instances.c[i].monitorFolder(false, &instances)
 		<-instances.readySend
 	}
+	instances.refreshUsernames()
 	fmt.Print("\n")
 	// saving at this point to save rescheduled post times
 	instances.saveSettings(false, instances.c)

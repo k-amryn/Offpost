@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -22,7 +23,7 @@ func pkce() (string, string) {
 	return challenge, verifier
 }
 
-func (instances *allInstances) connectTwitter(i int) {
+func (instances *allInstances) connectTwitter(instIndex int) {
 	twURL := "https://twitter.com/i/oauth2/authorize" +
 		"?response_type=code" +
 		"&client_id=RWJhQ1NGNGVNTEFYRGd1UUhYaXk6MTpjaQ" +
@@ -43,13 +44,13 @@ func (instances *allInstances) connectTwitter(i int) {
 	instances.authComm = make(chan string)
 	instances.mu.Unlock()
 
-	instances.authComm <- "Twitter " + instances.c[i].Name
+	instances.authComm <- "Twitter " + instances.c[instIndex].Name
 	info, _ := url.Parse(<-instances.authComm)
 
 	values := info.Query()
 	_, denied := values["error"]
 	if denied {
-		fmt.Println(instances.c[i].Name + ": Twitter connection denied.\n")
+		fmt.Println(instances.c[instIndex].Name + ": Twitter connection denied.\n")
 		close(instances.authComm)
 		return
 	}
@@ -75,17 +76,17 @@ func (instances *allInstances) connectTwitter(i int) {
 	access := uBody["access_token"]
 	refresh := uBody["refresh_token"]
 
-	instances.c[i].Platforms["twitter"] = access + "***" + refresh + "***" + getTwitterID(access)
+	instances.c[instIndex].Platforms["twitter"] = access + "***" + refresh + "***" + getTwitterUsername(access)
 	instances.saveSettings(false, instances.c)
 
-	fmt.Println(instances.c[i].Name + ": Connected to twitter.\n")
+	fmt.Println(instances.c[instIndex].Name + ": Connected to twitter.\n")
 
 	wsSend <- ""
 
 	close(instances.authComm)
 }
 
-func getTwitterID(access string) string {
+func getTwitterUsername(access string) string {
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", "https://api.twitter.com/2/users/me", nil)
 	req.Header.Add("Authorization", "Bearer "+access)
@@ -102,5 +103,18 @@ func getTwitterID(access string) string {
 	var uBody2 map[string]map[string]string
 	json.Unmarshal(body, &uBody2)
 
-	return uBody2["data"]["id"]
+	return uBody2["data"]["username"]
+}
+
+func (instances *allInstances) refreshUsernames() {
+	for _, e := range instances.c {
+		for platform := range e.Platforms {
+			switch platform {
+			case "twitter":
+				keys := strings.Split(e.Platforms["twitter"], "***")
+				username := getTwitterUsername(keys[0])
+				e.Platforms["twitter"] = keys[0] + "***" + keys[1] + "***" + username
+			}
+		}
+	}
 }

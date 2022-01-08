@@ -54,16 +54,41 @@
   }
 
   #twitter-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #graphic {
     display: grid;
+    place-items: center;
     grid-template-columns: 100px 70px 100px;
-    place-content: center;
-    height: 200px;
+    align-content: start;
+    height: 100px;
     grid-gap: 8px;
   }
 
   #arrow {
+    width: 70px;
     display: grid;
     place-items: center;
+  }
+
+  #username {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  #username span {
+    text-decoration: underline;
+  }
+
+  #username img {
+    width: 14px;
   }
 
   #content {
@@ -92,25 +117,37 @@
   .confirmation button {
     width: 80px;
   }
+  
   p {
     margin: none;
   }
 
   .disconnect button {
     border: none;
+    height: 30px;
     color: var(--red);
   }
 </style>
 
 <div id="wrapper">
+
   <div id="twitter-header">
-    <img width="100px" src="logo.svg" alt="">
-    <div id="arrow">
-      <svg class:connected viewBox="0 0 1086 473" xmlns="http://www.w3.org/2000/svg" xml:space="preserve" fill-rule="evenodd" clip-rule="evenodd" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5">
-        <path d="m1955.4 2209.9 413.4 426.4-413.4-426.4 413.4-426.5-413.4 426.5h2128L3670 1783.4l413.4 426.5-413.4 426.4 413.4-426.4h-2128Z" fill="none" transform="matrix(.47099 0 0 .45657 -879.5 -772.7)"/>
-      </svg>
+    <div id="graphic">
+      <img width="100px" src="logo.svg" alt="">
+      <div id="arrow">
+        <svg class:connected viewBox="0 0 1086 473" xmlns="http://www.w3.org/2000/svg" xml:space="preserve" fill-rule="evenodd" clip-rule="evenodd" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="1.5">
+          <path d="m1955.4 2209.9 413.4 426.4-413.4-426.4 413.4-426.5-413.4 426.5h2128L3670 1783.4l413.4 426.5-413.4 426.4 413.4-426.4h-2128Z" fill="none" transform="matrix(.47099 0 0 .45657 -879.5 -772.7)"/>
+        </svg>
+      </div>
+      <img style="margin-top: 5px" width="100px" src="twitter.svg" alt="">
     </div>
-    <img style="margin-top: 5px" width="100px" src="twitter.svg" alt="">
+
+    {#if connected}
+    <div id="username" on:click={() => window.open("https://twitter.com/" + $ginstances[instance].Platforms["twitter"])} >
+      <span>{$ginstances[instance].Platforms["twitter"]}</span>
+      <img src="./images/outlink.svg" alt="outlink">
+    </div>
+    {/if}
   </div>
 
 
