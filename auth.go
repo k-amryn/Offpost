@@ -86,6 +86,33 @@ func (instances *allInstances) connectTwitter(instIndex int) {
 	close(instances.authComm)
 }
 
+func (instances *allInstances) refreshTwitter(instIndex int) {
+	keys := strings.Split(instances.c[instIndex].Platforms["twitter"], "***")
+	resp, err := http.PostForm("https://api.twitter.com/2/oauth2/token", url.Values{
+		"refresh_token": {keys[1]},
+		"grant_type":    {"refresh_token"},
+		"client_id":     {"RWJhQ1NGNGVNTEFYRGd1UUhYaXk6MTpjaQ"},
+	})
+	if err != nil {
+		log.Panic("Error reaching Twitter for refresh token", err)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	var uBody map[string]string
+	json.Unmarshal(body, &uBody)
+	newAccess, exists := uBody["access_token"]
+	if !exists {
+		log.Panic("Invalid refresh token")
+	}
+	newRefresh := uBody["refresh_token"]
+
+	instances.c[instIndex].Platforms["twitter"] = newAccess + "***" + newRefresh + "***" + keys[2]
+}
+
 func getTwitterUsername(access string) string {
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", "https://api.twitter.com/2/users/me", nil)
@@ -107,10 +134,11 @@ func getTwitterUsername(access string) string {
 }
 
 func (instances *allInstances) refreshUsernames() {
-	for _, e := range instances.c {
+	for i, e := range instances.c {
 		for platform := range e.Platforms {
 			switch platform {
 			case "twitter":
+				instances.refreshTwitter(i)
 				keys := strings.Split(e.Platforms["twitter"], "***")
 				username := getTwitterUsername(keys[0])
 				e.Platforms["twitter"] = keys[0] + "***" + keys[1] + "***" + username
