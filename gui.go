@@ -22,10 +22,10 @@ import (
 func open(url string) error {
 	var cmd string
 	var args []string
-	url = `"` + url + `"`
 
 	switch runtime.GOOS {
 	case "windows":
+		url = `"` + url + `"`
 		cmd = "powershell"
 		args = []string{"start"}
 	case "darwin":
