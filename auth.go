@@ -1,53 +1,52 @@
 package main
 
 import (
-	crand "crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"net/url"
+	"os"
 	"strings"
-	"time"
+
+	"github.com/dghubble/oauth1"
+	"github.com/dghubble/oauth1/twitter"
 )
 
-func pkce() (string, string) {
-	var vb [64]byte
-	io.ReadFull(crand.Reader, vb[:])
-	verifier := base64.RawURLEncoding.EncodeToString(vb[:])
-	cb := sha256.Sum256([]byte(verifier))
-	challenge := base64.RawURLEncoding.EncodeToString(cb[:])
-	return challenge, verifier
-}
-
 func (instances *allInstances) connectTwitter(instIndex int) {
-	twURL := "https://twitter.com/i/oauth2/authorize" +
-		"?response_type=code" +
-		"&client_id=RWJhQ1NGNGVNTEFYRGd1UUhYaXk6MTpjaQ" +
-		"&redirect_uri=http://localhost:14859/auth" +
-		"&scope=tweet.write%20tweet.read%20users.read%20offline.access"
+	keysRaw, err := os.ReadFile("./keys/twitter.txt")
+	if err != nil {
+		fmt.Println("Sorry. You don't have the keys.")
+	}
+	keys := strings.Split(string(keysRaw), "***")
 
-	_, state := pkce()
-	twURL += "&state=" + state
+	auth := oauth1.Config{
+		ConsumerKey:    keys[0],
+		ConsumerSecret: keys[1],
+		CallbackURL:    "http://localhost:14859/auth",
+		Endpoint:       twitter.AuthorizeEndpoint,
+	}
 
-	ch, ver := pkce()
-	twURL += "&code_challenge=" + ch
-	twURL += "&code_challenge_method=s256"
-	fmt.Println(twURL)
-	time.Sleep(time.Second)
-	open(twURL)
+	requestToken, requestSecret, err := auth.RequestToken()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	authorizationURL, _ := auth.AuthorizationURL(requestToken)
+	// handle err
+	open(authorizationURL.String())
 
 	instances.mu.Lock()
 	instances.authComm = make(chan string)
 	instances.mu.Unlock()
 
 	instances.authComm <- "Twitter " + instances.c[instIndex].Name
+
 	info, _ := url.Parse(<-instances.authComm)
 
+	// values is the response from the offpost /auth landing page
 	values := info.Query()
+
 	_, denied := values["error"]
 	if denied {
 		fmt.Println(instances.c[instIndex].Name + ": Twitter connection denied.\n")
@@ -55,78 +54,39 @@ func (instances *allInstances) connectTwitter(instIndex int) {
 		return
 	}
 
-	resp, err := http.PostForm("https://api.twitter.com/2/oauth2/token?", url.Values{
-		"code":          {values["code"][0]},
-		"grant_type":    {"authorization_code"},
-		"client_id":     {"RWJhQ1NGNGVNTEFYRGd1UUhYaXk6MTpjaQ"},
-		"redirect_uri":  {"http://localhost:14859/auth"},
-		"code_verifier": {ver},
-	})
+	accessToken, accessSecret, err := auth.AccessToken(values["oauth_token"][0], requestSecret, values["oauth_verifier"][0])
 	if err != nil {
-		log.Panic("Error reaching Twitter for verification", err)
+		log.Fatal(err)
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	var uBody map[string]string
-	json.Unmarshal(body, &uBody)
-	access := uBody["access_token"]
-	refresh := uBody["refresh_token"]
-
-	instances.c[instIndex].Platforms["twitter"] = access + "***" + refresh + "***" + getTwitterUsername(access)
+	instances.c[instIndex].Platforms["twitter"] = accessToken + "***" + accessSecret + "***" + getTwitterUsername(accessToken, accessSecret)
 	instances.saveSettings(false, instances.c)
-
-	fmt.Println(instances.c[instIndex].Name + ": Connected to twitter.\n")
 
 	wsSend <- ""
 
 	close(instances.authComm)
 }
 
-func (instance *instance) refreshTwitter() {
-	keys := strings.Split(instance.Platforms["twitter"], "***")
-	resp, err := http.PostForm("https://api.twitter.com/2/oauth2/token", url.Values{
-		"refresh_token": {keys[1]},
-		"grant_type":    {"refresh_token"},
-		"client_id":     {"RWJhQ1NGNGVNTEFYRGd1UUhYaXk6MTpjaQ"},
-	})
+func getTwitterUsername(access, secret string) string {
+	keysRaw, err := os.ReadFile("./keys/twitter.txt")
 	if err != nil {
-		log.Panic("Error reaching Twitter for refresh token", err)
+		fmt.Println("Sorry. You don't have the keys.")
 	}
+	keys := strings.Split(string(keysRaw), "***")
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Panic(err)
-	}
+	authConf := oauth1.NewConfig(keys[0], keys[1])
+	token := oauth1.NewToken(access, secret)
 
-	var uBody map[string]string
-	json.Unmarshal(body, &uBody)
-	newAccess, exists := uBody["access_token"]
-	if !exists {
-		log.Panic(instance.Name + ": Invalid Twitter refresh token")
-	}
-	newRefresh := uBody["refresh_token"]
+	client := authConf.Client(oauth1.NoContext, token)
 
-	instance.Platforms["twitter"] = newAccess + "***" + newRefresh + "***" + keys[2]
-}
-
-func getTwitterUsername(access string) string {
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET", "https://api.twitter.com/2/users/me", nil)
-	req.Header.Add("Authorization", "Bearer "+access)
-
-	resp, err := client.Do(req)
+	resp, err := client.Get("https://api.twitter.com/2/users/me")
 	if err != nil {
 		log.Panic(err)
 	}
+	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Panic(err)
-	}
+	body, _ := io.ReadAll(resp.Body)
+
 	var uBody2 map[string]map[string]string
 	json.Unmarshal(body, &uBody2)
 
@@ -141,9 +101,8 @@ func (instances *allInstances) refreshUsernames() {
 				if e.Platforms["twitter"] == "no-config" {
 					break
 				}
-				e.refreshTwitter()
 				keys := strings.Split(e.Platforms["twitter"], "***")
-				username := getTwitterUsername(keys[0])
+				username := getTwitterUsername(keys[0], keys[1])
 				e.Platforms["twitter"] = keys[0] + "***" + keys[1] + "***" + username
 			}
 		}
