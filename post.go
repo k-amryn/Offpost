@@ -60,8 +60,8 @@ func (instance *instance) makePost() {
 			}
 			switch key {
 			case "twitter":
-				// postLinks["twitter"] = postTweet(theQueue, "", instance.Platforms["twitter"])
-				postLinks["twitter"] = "https://tweetlink/"
+				postLinks["twitter"] = postTweet(theQueue, "", instance.Platforms["twitter"])
+				// postLinks["twitter"] = "https://tweetlink/"
 			case "facebook":
 				// postLinks["facebook"] = postFacebook(theQueue, "", instance.Platforms["facebook"])
 				postLinks["facebook"] = "https://facebooklink/"
@@ -86,9 +86,10 @@ func postTweet(filepaths []string, caption string, accessKeys string) string {
 		return "no"
 	}
 
-	keyList := strings.Split(accessKeys, "***")
+	accessKeyList := strings.Split(accessKeys, "***")
+	consumerKeyList := strings.Split(twitterKeys, "***")
 	api := anaconda.NewTwitterApiWithCredentials(
-		keyList[0], keyList[1], keyList[2], keyList[3])
+		accessKeyList[0], accessKeyList[1], consumerKeyList[0], consumerKeyList[1])
 
 	media := url.Values{}
 	mediaList := ""
