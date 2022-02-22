@@ -1,24 +1,23 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/dghubble/oauth1"
 	"github.com/dghubble/oauth1/twitter"
 )
 
+//go:embed keys/twitter.txt
+var twitterKeys string
+
 func (instances *allInstances) connectTwitter(instIndex int) {
-	keysRaw, err := os.ReadFile("./keys/twitter.txt")
-	if err != nil {
-		fmt.Println("Sorry. You don't have the keys.")
-	}
-	keys := strings.Split(string(keysRaw), "***")
+	keys := strings.Split(string(twitterKeys), "***")
 
 	auth := oauth1.Config{
 		ConsumerKey:    keys[0],
@@ -68,11 +67,7 @@ func (instances *allInstances) connectTwitter(instIndex int) {
 }
 
 func getTwitterUsername(access, secret string) string {
-	keysRaw, err := os.ReadFile("./keys/twitter.txt")
-	if err != nil {
-		fmt.Println("Sorry. You don't have the keys.")
-	}
-	keys := strings.Split(string(keysRaw), "***")
+	keys := strings.Split(string(twitterKeys), "***")
 
 	authConf := oauth1.NewConfig(keys[0], keys[1])
 	token := oauth1.NewToken(access, secret)

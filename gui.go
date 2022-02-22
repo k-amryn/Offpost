@@ -1,8 +1,10 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,6 +17,12 @@ import (
 
 	"github.com/getlantern/systray"
 	"github.com/gorilla/websocket"
+)
+
+var (
+	//go:embed svelte/public
+	f          embed.FS
+	content, _ = fs.Sub(f, "svelte/public")
 )
 
 // --------------------------------tray functions-------------------------------
@@ -70,20 +78,13 @@ func (instances *allInstances) handleWebServer() {
 	http.HandleFunc("/config", instances.createWebSocket)
 	http.HandleFunc("/authdata", instances.createWebSocket)
 
-	// if requested file exists then return it; otherwise return /index.html
-	fs := http.FileServer(http.Dir("./svelte/public"))
+	server := http.FileServer(http.FS(content))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			fullPath := "./svelte/public" + r.URL.Path
-			_, err := os.Stat(fullPath)
-			if err != nil {
-				if !os.IsNotExist(err) {
-					log.Panic(err)
-				}
-				r.URL.Path = "/"
-			}
+		// if landing on /auth, serve main index.html *routed* to /auth
+		if r.URL.Path == "/auth" {
+			r.URL.Path = "/"
 		}
-		fs.ServeHTTP(w, r)
+		server.ServeHTTP(w, r)
 	})
 
 	userdata := http.FileServer(http.Dir("./userdata"))
