@@ -6,3 +6,5 @@ offpost
 build/
 mac/
 keys/
+offpost_flutter
+.vscode/

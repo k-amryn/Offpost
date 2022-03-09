@@ -155,7 +155,12 @@ func numberAtEnd(filename string) int {
 
 // get the filename minus end numbers and file extension
 func getBaseName(filename string) string {
-	filename = filename[:strings.LastIndex(filename, ".")]
+	slashIndex := strings.LastIndex(filename, "/")
+	if slashIndex == -1 {
+		filename = filename[:strings.LastIndex(filename, ".")]
+	} else {
+		filename = filename[slashIndex+1 : strings.LastIndex(filename, ".")]
+	}
 	rgx, err := regexp.Compile(`-\d{1,3}$`)
 	if err != nil {
 		return ""

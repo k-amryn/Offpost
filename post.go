@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/ChimeraCoder/anaconda"
 )
@@ -41,6 +42,9 @@ func (instance *instance) makePost() {
 
 	instance.appendTxtFile([][]string{{firstLine}}, "posted")
 
+	// process caption
+	caption := strings.ReplaceAll(instance.Caption, "%{filename}", getBaseName(theQueue[0]))
+
 	fmt.Print(instance.Name + " is posting: [")
 	for i := range theQueue {
 		if i == len(theQueue)-1 {
@@ -48,9 +52,19 @@ func (instance *instance) makePost() {
 		} else {
 			fmt.Print(filepath.Base(theQueue[i]) + "; ")
 		}
+
+		if filepath.Ext(theQueue[i]) == ".txt" {
+			f, _ := os.Open(theQueue[i])
+			reader := bufio.NewReader(f)
+			content, _ := ioutil.ReadAll(reader)
+			caption += "\n" + string(content)
+		}
 	}
 
 	postLinks := make(map[string]string)
+
+	fmt.Println(caption)
+	time.Sleep(1000 * time.Hour)
 
 	if len(instance.Platforms) != 0 {
 		for key := range instance.Platforms {
@@ -93,21 +107,13 @@ func postTweet(filepaths []string, caption string, accessKeys string) string {
 
 	media := url.Values{}
 	mediaList := ""
-	howManyTxt := 0
 	howManyImg := 0
 	for _, path := range filepaths {
 		f, _ := os.Open(path)
 		reader := bufio.NewReader(f)
 		content, _ := ioutil.ReadAll(reader)
 
-		if filepath.Ext(path) == ".txt" {
-			howManyTxt++
-			if howManyTxt == 1 {
-				caption += string(content)
-			} else {
-				caption += "\n" + string(content)
-			}
-		} else {
+		if filepath.Ext(path) != ".txt" {
 			howManyImg++
 			encoded := base64.StdEncoding.EncodeToString(content)
 
@@ -133,7 +139,7 @@ func postTweet(filepaths []string, caption string, accessKeys string) string {
 	// fmt.Printf("response type: %T\nresponse value: %v\n", response.MediaIDString, response.MediaIDString)
 	// fmt.Printf("err type: %T\nerr value: %v\n\n", err, err)
 
-	response2, err2 := api.PostTweet(caption, media)
+	// response2, err2 := api.PostTweet(caption, media)
 
 	// this prints the formatted response from Twitter when making a Tweet
 	// sinfo := reflect.ValueOf(response2)
@@ -142,12 +148,12 @@ func postTweet(filepaths []string, caption string, accessKeys string) string {
 	// 	fmt.Printf("%s:\t%v\n", response2type.Field(i).Name, sinfo.Field(i).Interface())
 	// }
 
-	if err2 != nil {
-		fmt.Printf("errtype: %T\nerr value: %v", err2, err2)
-		return "error"
-	}
+	// if err2 != nil {
+	// 	fmt.Printf("errtype: %T\nerr value: %v", err2, err2)
+	// 	return "error"
+	// }
 
-	return "https://twitter.com/" + response2.User.ScreenName + "/status/" + response2.IdStr
+	return "https://twitter.com/" + "testing" //response2.User.ScreenName + "/status/" + response2.IdStr
 }
 
 func postFacebook(filepaths []string, caption string, accessKeys string) string {
