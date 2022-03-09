@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/ChimeraCoder/anaconda"
 )
@@ -64,7 +63,6 @@ func (instance *instance) makePost() {
 	postLinks := make(map[string]string)
 
 	fmt.Println(caption)
-	time.Sleep(1000 * time.Hour)
 
 	if len(instance.Platforms) != 0 {
 		for key := range instance.Platforms {
