@@ -139,7 +139,7 @@ func postTweet(filepaths []string, caption string, accessKeys string) string {
 	// fmt.Printf("response type: %T\nresponse value: %v\n", response.MediaIDString, response.MediaIDString)
 	// fmt.Printf("err type: %T\nerr value: %v\n\n", err, err)
 
-	// response2, err2 := api.PostTweet(caption, media)
+	response2, err2 := api.PostTweet(caption, media)
 
 	// this prints the formatted response from Twitter when making a Tweet
 	// sinfo := reflect.ValueOf(response2)
@@ -148,12 +148,12 @@ func postTweet(filepaths []string, caption string, accessKeys string) string {
 	// 	fmt.Printf("%s:\t%v\n", response2type.Field(i).Name, sinfo.Field(i).Interface())
 	// }
 
-	// if err2 != nil {
-	// 	fmt.Printf("errtype: %T\nerr value: %v", err2, err2)
-	// 	return "error"
-	// }
+	if err2 != nil {
+		fmt.Printf("errtype: %T\nerr value: %v", err2, err2)
+		return "error"
+	}
 
-	return "https://twitter.com/" + "testing" //response2.User.ScreenName + "/status/" + response2.IdStr
+	return "https://twitter.com/" + response2.User.ScreenName + "/status/" + response2.IdStr
 }
 
 func postFacebook(filepaths []string, caption string, accessKeys string) string {

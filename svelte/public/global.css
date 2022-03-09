@@ -1,6 +1,6 @@
 :root {
 	--normal-font: 1em;
-	--small-font: 0.8em;
+	--small-font: 0.75em;
 	--main-border-size: 5px solid black;
 
 	/* the color scheme */
@@ -17,12 +17,22 @@ html, body {
 	height: 100%;
 }
 
+@font-face {
+	font-family: "InterMed";
+	src: url("./intermed.woff2")
+}
+
+@font-face {
+	font-family: "InterSemi";
+	src: url("./intersemi.woff2")
+}
+
 body {
 	color: var(--black);
 	margin: 0;
 	padding: 0px;
 	box-sizing: border-box;
-	font-family: 'Inter Medium';
+	font-family: 'InterMed';
 }
 
 label {
