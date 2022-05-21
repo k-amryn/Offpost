@@ -160,7 +160,8 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 			instances.authComm <- msg
 			return
 		} else {
-			switch msg[:strings.Index(msg, " ")] {
+			spaceIndex := strings.Index(msg, " ")
+			switch msg[:spaceIndex] {
 			case "s":
 				var data []*instance
 				json.Unmarshal(p[2:], &data)
@@ -172,10 +173,10 @@ func (instances *allInstances) createWebSocket(w http.ResponseWriter, r *http.Re
 				}
 				instances.deleteInst(i)
 			case "twitter":
-				i, _ := strconv.Atoi(msg[strings.Index(msg, " ")+1:])
+				i, _ := strconv.Atoi(msg[spaceIndex+1:])
 				instances.connectTwitter(i)
 			case "twitter,r":
-				i, _ := strconv.Atoi(msg[strings.Index(msg, " ")+1:])
+				i, _ := strconv.Atoi(msg[spaceIndex+1:])
 				fmt.Println(instances.c[i].Name, "DELETING TWITTER")
 			default:
 				fmt.Println("Invalid socket message received.")

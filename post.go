@@ -62,8 +62,6 @@ func (instance *instance) makePost() {
 
 	postLinks := make(map[string]string)
 
-	fmt.Println(caption)
-
 	if len(instance.Platforms) != 0 {
 		for key := range instance.Platforms {
 			if instance.Platforms[key] == "no-config" {
@@ -137,6 +135,7 @@ func postTweet(filepaths []string, caption string, accessKeys string) string {
 	// fmt.Printf("response type: %T\nresponse value: %v\n", response.MediaIDString, response.MediaIDString)
 	// fmt.Printf("err type: %T\nerr value: %v\n\n", err, err)
 
+	fmt.Println(caption)
 	response2, err2 := api.PostTweet(caption, media)
 
 	// this prints the formatted response from Twitter when making a Tweet
