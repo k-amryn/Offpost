@@ -1,13 +1,13 @@
 <script lang="typescript">
 	import MainWindow from './MainWindow.svelte'
-	import { activeInstance, ginstances, ginstancesOld } from './stores'
+  import TwitterConfig from './TwitterConfig.svelte'
+	import { activeInstance, ginstances, ginstancesOld, unsavedChanges } from './stores'
+  import { fade } from 'svelte/transition'
 
   // this block is used for frontend testing with 'npm run dev', no backend
   // fetch("test_offpost.json")
   //   .then(response => response.json())
-  //   .then(data => {
-  //     $ginstances = toGInst(data)
-  //   })
+  //   .then(data => $ginstances = toGInst(data) )
 
   var serversocket = new WebSocket("ws://localhost:14859/config");
   
@@ -16,8 +16,6 @@
     $ginstances = await toGInst(JSON.parse(e.data))
     $ginstancesOld = JSON.parse(JSON.stringify($ginstances))
   }
-
-  let dialogueActive: boolean = false
 
   // each message sent over the server socket has an identifier at the beginning
   // of the string in the form of "[idenfifier] "
@@ -158,6 +156,19 @@
     return data
   }
 
+  function deleteInstance(instance: number) {
+    $activeInstance = -1
+    $unsavedChanges = false
+
+    dialogueActive = false
+    var newGinst = $ginstances.slice(0,instance)
+    newGinst.push(...$ginstances.slice(instance+1))
+
+    $ginstances = newGinst
+
+    sendSocket("d " + instance)
+
+  }
   
   var alertText: string
   var alertDisplayed: boolean
@@ -170,64 +181,169 @@
         alertDisplayed = false
       }, 3000);
     }
+  }  
+
+  var dialogueActive: boolean = false
+  var dialogueType: string
+  var instIndex: number = 0
+  function showDialogue(event) {
+    dialogueType = event.detail.type
+    dialogueActive = true
+    if (instIndex > -1) {
+      instIndex = event.detail.instance
+    }
   }
+  
 </script>
 
 <style>
 	#the-container {
-		width: 800px;
+    height: 100vh;
 		margin: auto;
 		display: grid;
-		place-items: center;
+		justify-items: center;
+    align-items: start;
+    overflow: hidden;
+    position: relative;
 	}
-  #brand-heading {
+
+  #mainwindow-wrapper {
+    width: 800px;
+		display: grid;
+		place-items: center;
+  }
+
+  #brand-header {
     display: grid;
-    width: 90%;
-    height: 200px;
+    align-items: end;
     grid-template-columns: auto auto;
-    place-content: center;
-    align-content: center;
+    width: 100%;
+    gap: 10px;
+    margin-bottom: 9px;
+    height: 100px;
+  }
+
+  #logo-text {
+    display: flex;
+    align-items: center;
+    gap: 3px;
   }
 
   #logo {
-    width: 200px;
+    width: 40px;
   }
 
   #alert {
-    width: 0px;
-    height: 130px;
     white-space: nowrap;
     overflow: hidden;
     border-radius: 10px;
-    border: var(--main-border-size);
     margin: 30px 0px 30px 0px;
+    background: #c7c7c7;
+    text-align: center;
     opacity: 0;
+    z-index: 2;
+    position: absolute;
+    top: 29px;
 
-    transition: width 0.3s, opacity 0.3s;
+    transition: opacity 0.2s;
   }
 
   #alert.alertDisplayed {
-    width: 400px;
     opacity: 1;
-    transition: width 0.3s, opacity 0.3s;
+    transition: opacity 0.2s;
   }
 
   #alert span {
     display: block;
     margin: 10px 10px 10px 10px;
   }
+  
+  #dialogue {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.2);
+    display: grid;
+    align-items: start;
+    justify-items: center;
+    padding-top: 300px;
+    z-index: 10;
+  }
+
+  @media(max-height: 900px) {
+    #dialogue {
+    align-items: center;
+    padding-top: 0px;
+    }
+  }
+
+  #dialogue-inner {
+    background: white;
+    border-radius: 10px;
+    /* box-shadow: 0px 0px 20px -10px black; */
+    box-sizing: border-box;
+  }
+  #delete-content {
+    display: grid;
+    grid-template-rows: auto 30px;
+    padding: 20px;
+    width: 300px;
+    height: 150px;
+  }
+  .button-group {
+    justify-self: center;
+  }
+  button {
+    width: 70px;
+  }
+  p {
+    margin: 0px 0px 10px 0px;
+  }
 </style>
 
 <div id="the-container">
-	<div id="brand-heading">
-		<img id="logo" src="./logo.svg" alt="Offpost logo">
-    <div class:alertDisplayed id="alert">
-       <span> {alertText} </span>
+  <div class:alertDisplayed id="alert">
+     <span> {alertText} </span>
+  </div>
+
+  {#if dialogueActive}
+    <div transition:fade="{{ duration: 70 }}" id="dialogue" on:click={() => {dialogueActive = false}}>
+      <div id="dialogue-inner" on:click={e => e.stopPropagation()}>
+        {#if dialogueType === "delete"}
+          <div id="delete-content">
+            <div>
+              <p>Delete {$ginstances[instIndex].Name}?</p>
+              <p>This will remove its post history and platform connections.</p>
+            </div>
+            <div class="button-group">
+              <button on:click={() => deleteInstance(instIndex)}>Yes</button>
+              <button on:click={() => {dialogueActive = false}}>No</button>
+            </div>
+          </div>
+        {:else if dialogueType === "twitter"}
+          <TwitterConfig instance={instIndex} 
+            on:socketMessage={e => sendSocket(e.detail.text)}
+          />
+        {:else}
+          <div>
+            we dont have a dialogue setup for this yet.
+          </div>
+        {/if}
+      </div>
     </div>
-	</div>
-	<MainWindow
-    bind:dialogueActive={dialogueActive}
-    on:alert={showAlert}
-    on:socketMessage={m => sendSocket(m.detail.text)}
-  />
+  {/if}
+
+  <div id="mainwindow-wrapper">
+    <div id="brand-header">
+      <div id="logo-text">
+        <img id="logo" src="./logo.svg" alt="Offpost logo">
+        <span>Offpost</span>
+      </div>
+    </div>
+    <MainWindow
+      on:dialogue={showDialogue}
+      on:alert={showAlert}
+      on:socketMessage={m => sendSocket(m.detail.text)}
+    />
+  </div>
 </div>

@@ -62,33 +62,16 @@
 </script>
 
 <style>
-  #sidebar-items-and-space {
-    display: grid;
-    grid-template-rows: min-content 1fr;
-    place-items: center;
-    justify-items: center;
-    overflow: auto;
-    scrollbar-width: none;
-    box-sizing: border-box;
-    height: 100%;
-  }
-
-  #sidebar-items-and-space::-webkit-scrollbar {
+  #sidebar::-webkit-scrollbar {
     display: none;
   }
 
-  #afterspace {
-    border-right: var(--main-border-size);
-    border-top: none;
-    height: 100%;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
   #sidebar {
-    width: 100%;
-    display: grid;
-    place-items: center;
+    height: 100%;
+    width: 90px;
+    display: flex;
+    flex-flow: column;
+    place-items: start;
   }
 
   .sidebar-item {
@@ -97,13 +80,13 @@
     display: grid;
     place-items: center;
     box-sizing: border-box;
+    cursor: pointer;
     overflow: hidden;
   }
 
   .sidebar-item-inner {
     width: 70px;
     height: 70px;
-    border: 2px solid black;
     border-radius: 7px;
     overflow: hidden;
     display: grid;
@@ -125,36 +108,12 @@
   }
 
   .sidebar-item.active {
-    margin-left: -5px;
-  }
-
-  .sidebar-item:not(.active) {
-    cursor: pointer;
-    border-right: var(--main-border-size);
-  }
-
-  .sidebar-borderer {
-    height: 10px;
-    width: 100%;
-    box-sizing: border-box;
-    border-right: var(--main-border-size);
-  }
-
-  .before-active {
-    border-bottom-right-radius: 10px;
-    border-bottom: var(--main-border-size);
-  }
-
-  .after-active {
-    border-top-right-radius: 10px;
-    border-top: var(--main-border-size);
+    background: #C7C7C7;
+    border-radius: 15px;
   }
 </style>
 
-<div id="sidebar-items-and-space">
   <div id="sidebar">
-    <div class="none"></div>
-
     <div id="home" class="sidebar-item"
       class:active="{ $activeInstance === -1 }"
       on:click={() => setActive(-1)}>
@@ -186,8 +145,6 @@
         </div>
       </div>
     { /each }
-
-    <div class="sidebar-borderer" class:after-active="{ $activeInstance === $ginstances.length-1 }"></div>
     <div id="new-instance" class="sidebar-item" on:click="{newInstance}">
       <div class="sidebar-item-inner">
         <svg width="44.835" height="44.835" version="1.1" viewBox="0 0 11.863 11.863" xmlns="http://www.w3.org/2000/svg">
@@ -200,5 +157,3 @@
     </div>
 
   </div>
-  <div id="afterspace"></div>
-</div>

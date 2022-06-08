@@ -1,51 +1,51 @@
 [{
-        "Name": "coolcars",
-        "ImgFolders": [
-            "C:/path/to/folder/coolcars",
-            "C:/path/to/folder/coolcars2"
-        ],
-        "QueueDelay": "4s",
-        "PostDelay": "1m",
-        "StartupPostDelay": "full",
-        "Platforms": {
-            "twitter": "facebook***placeholder***data",
-            "facebook": "twitter***placeholder***data"
-        },
-        "Caption": "The car of the day is the %{filename}",
-        "ItemsInQueue": 0,
-        "NextPostTime": 1637855092459
+    "Name": "coolcars",
+    "ImgFolders": [
+        "C:/path/to/folder/coolcars",
+        "C:/path/to/folder/coolcars2"
+    ],
+    "QueueDelay": "4s",
+    "PostDelay": "1m",
+    "StartupPostDelay": "full",
+    "Platforms": {
+        "twitter": "facebook***placeholder***data",
+        "facebook": "twitter***placeholder***data"
     },
-    {
-        "Name": "plantgarden",
-        "ImgFolders": [
-            "C:/path/to/folder/plantgarden",
-            "C:/path/to/folder/plantgarden2"
-        ],
-        "QueueDelay": "4s",
-        "PostDelay": "2h",
-        "StartupPostDelay": "full",
-        "Platforms": {
-            "tumblr": "facebook***placeholder***data",
-            "twitter": "twitter***placeholder***data"
-        },
-        "Caption": "This plant was planted on %{date}",
-        "ItemsInQueue": 0,
-        "NextPostTime": 1637855092461
+    "Caption": "The car of the day is the %{filename}",
+    "ItemsInQueue": 0,
+    "NextPostTime": 1637855092459
+},
+{
+    "Name": "plantgarden",
+    "ImgFolders": [
+        "C:/path/to/folder/plantgarden",
+        "C:/path/to/folder/plantgarden2"
+    ],
+    "QueueDelay": "4s",
+    "PostDelay": "2h",
+    "StartupPostDelay": "full",
+    "Platforms": {
+        "tumblr": "facebook***placeholder***data",
+        "twitter": "twitter***placeholder***data"
     },
-    {
-        "Name": "johnfunnypic",
-        "ImgFolders": [
-            "C:/path/to/folder/johnfunnypic"
-        ],
-        "QueueDelay": "4s",
-        "PostDelay": "20m",
-        "StartupPostDelay": "full",
-        "Platforms": {
-            "facebook": "facebook***placeholder***data",
-            "tumblr": "twitter***placeholder***data"
-        },
-        "Caption": "%{filename} is funny",
-        "ItemsInQueue": 0,
-        "NextPostTime": 1637855092463
-    }
+    "Caption": "This plant was planted on %{date}",
+    "ItemsInQueue": 0,
+    "NextPostTime": 1637855092461
+},
+{
+    "Name": "johnfunnypic",
+    "ImgFolders": [
+        "C:/path/to/folder/johnfunnypic"
+    ],
+    "QueueDelay": "4s",
+    "PostDelay": "20m",
+    "StartupPostDelay": "full",
+    "Platforms": {
+        "facebook": "facebook***placeholder***data",
+        "tumblr": "twitter***placeholder***data"
+    },
+    "Caption": "%{filename} is funny",
+    "ItemsInQueue": 0,
+    "NextPostTime": 1637855092463
+}
 ]

@@ -8,23 +8,35 @@
 
 <style>
 	#container {
-		padding: 20px;
 		box-sizing: border-box;
 		height: 100%;
 		overflow: auto;
 	}
+	
 
 	#heading-bar {
-		border: var(--main-border-size);
-		border-radius: 10px;
-		display: grid;
-		padding: 0px 15px 0px 15px;
+		background: var(--filler);
+		border-radius: 15px;
+		height: 90px;
+		padding: 0px 20px 0px 20px;
+		display: flex;
 		align-items: center;
-		grid-template-columns: 1fr 20px;
+		justify-content: center;
 		font-size: 1em;
+		position: relative;
+		transition: background 0.2s;
+	}
+
+	#heading-text {
+		height: 100%;
+		display: flex; 
+		place-items: center;
+		place-content: center;
 	}
 
 	#heading-menu {
+		position: absolute;
+		right: 20px;
 		width: 20px;
 		cursor: pointer;
 	}
@@ -38,12 +50,12 @@
 	}
 
 	.instance {
-		border: var(--main-border-size);
+		background: var(--filler);
 		border-radius: 10px;
-		padding: 5px;
+		padding: 10px;
 		display: grid;
 		grid-template-columns: auto 1fr;
-		gap: 5px;
+		gap: 10px;
 		cursor: pointer;
 		user-select: none;
 	}
@@ -51,7 +63,6 @@
 	.instance-img {
 		width: 100px;
 		height: 100px;
-		border: 2px solid black;
 		border-radius: 7px;
 		overflow: hidden;
 	}
@@ -91,7 +102,9 @@
 
 <div id="container">
 	<div id="heading-bar">
-		<p id="heading-text">Home</p>
+		<div id="heading-text">
+			<img src="images/cottage.svg" alt="">
+		</div>
 		<svg id="heading-menu" version="1.1" viewBox="0 0 7.8668 7.5988" xmlns="http://www.w3.org/2000/svg">
 			<g transform="translate(-319.08 -86.143)">
 			<g transform="translate(149.08 67.09)">

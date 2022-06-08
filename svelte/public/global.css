@@ -9,6 +9,7 @@
 	--blue: #315eee;
 	--orange: #f09605;
 	--black: #141414;
+	--filler: #e7e7e7;
 }
 
 html, body {
@@ -42,14 +43,19 @@ label {
 input, button, select, textarea {
 	-webkit-appearance: none;
 	-moz-appearance: none;
-	background-color: white;
+	background-color: var(--filler);
 	font-family: inherit;
 	font-size: inherit;
 	box-sizing: border-box;
-	border: 2px solid black;
+	border: none;
 	padding: 5px 8px 5px 8px;
 	border-radius: 5px;
 	margin: 0;
+}
+
+input:focus, textarea:focus {
+	outline: 2px solid black;
+	z-index: 2;
 }
 
 textarea {
@@ -57,7 +63,7 @@ textarea {
 }
 
 select, button, input {
-	background: transparent;
+	background-color: var(--filler);
 	height: 36px;
 }
 
@@ -73,7 +79,7 @@ select, button {
 select {
 	background: url('data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTExIDY3IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxLjUiPjxwYXRoIGQ9Ik05OSAxMUw1NSA1NSAxMSAxMSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjIyLjQiLz48L3N2Zz4=');
 	background-size: 10px;
-  background-position: calc(100% - 5px) center;
-  background-repeat: no-repeat;
+	background-position: calc(100% - 5px) center;
+	background-repeat: no-repeat;
 	padding-right: 25px;
 }

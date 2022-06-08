@@ -122,9 +122,10 @@
     margin: none;
   }
 
-  .disconnect button {
+  .disconnect div {
     border: none;
-    height: 30px;
+    cursor: pointer;
+    height: 25px;
     color: var(--red);
   }
 </style>
@@ -159,7 +160,7 @@
     {:else}
       {#if !confirming}
         <div class="button-line disconnect">
-          <button on:click={() => confirming = true}>Disconnect</button>
+          <div on:click={() => confirming = true}>Disconnect</div>
         </div>
       {:else}
         <p>Are you sure? You can reconnect later.</p>

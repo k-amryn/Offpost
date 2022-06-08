@@ -6,5 +6,4 @@ self.addEventListener('install', e => {
 })
 
 self.addEventListener('fetch', (e) => {
-  console.log(`tried to request ${e.request.status}`)
 });

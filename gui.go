@@ -78,7 +78,10 @@ func (instances *allInstances) handleWebServer() {
 	http.HandleFunc("/config", instances.createWebSocket)
 	http.HandleFunc("/authdata", instances.createWebSocket)
 
-	server := http.FileServer(http.FS(content))
+	// toggle between these lines for testing versus release
+	// server := http.FileServer(http.Dir("./svelte/public")) // for testing with `npm run dev`
+	server := http.FileServer(http.FS(content)) // for release (embed GUI in binary)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// if landing on /auth, serve main index.html *routed* to /auth
 		if r.URL.Path == "/auth" {
