@@ -32,14 +32,21 @@
     justify-items: center;
   }
   #info {
-    display: grid;
+    display: flex;
+    gap: 10px;
     height: 200px;
-    grid-template-columns: auto auto;
-    place-content: center;
+    flex-direction: column;
   }
 
   #logo {
-    width: 200px;
+    height: 40px;
+    gap: 3px;
+    display: flex;
+    align-items: center;
+  }
+
+  #logo img {
+    width: 40px;
   }
 
   #alert {
@@ -47,15 +54,17 @@
     height: 110px;
     overflow: hidden;
     border-radius: 10px;
-    border: var(--main-border-size);
-    margin: 30px 0px 30px 0px;
-    padding: 10px;
+    background: white;
+    padding: 15px;
   }
 </style>
 
 <div id="wrap">
   <div id="info">
-    <img id="logo" src="./logo.svg" alt="Offpost logo">
+    <div id="logo">
+      <img src="./logo.svg" alt="Offpost logo">
+      Offpost
+    </div>
     <div id="alert">
       {#if connected}
       <span>{instName}: Connected to {platform}.</span>
